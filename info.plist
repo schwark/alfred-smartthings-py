@@ -37,29 +37,6 @@
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>concurrently</key>
-				<false/>
-				<key>escaping</key>
-				<integer>98</integer>
-				<key>script</key>
-				<string>python command.py {query}</string>
-				<key>scriptargtype</key>
-				<integer>0</integer>
-				<key>scriptfile</key>
-				<string></string>
-				<key>type</key>
-				<integer>0</integer>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.action.script</string>
-			<key>uid</key>
-			<string>67456363-F141-4687-B7F1-94A6BA8F021C</string>
-			<key>version</key>
-			<integer>2</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
 				<key>alfredfiltersresults</key>
 				<false/>
 				<key>alfredfiltersresultsmatchmode</key>
@@ -73,7 +50,7 @@
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>keyword</key>
-				<string>sp</string>
+				<string>st</string>
 				<key>queuedelaycustom</key>
 				<integer>3</integer>
 				<key>queuedelayimmediatelyinitially</key>
@@ -105,6 +82,29 @@
 			<string>91977290-EE98-435C-B30B-1766A7130E62</string>
 			<key>version</key>
 			<integer>3</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>98</integer>
+				<key>script</key>
+				<string>python command.py {query}</string>
+				<key>scriptargtype</key>
+				<integer>0</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>0</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>67456363-F141-4687-B7F1-94A6BA8F021C</string>
+			<key>version</key>
+			<integer>2</integer>
 		</dict>
 	</array>
 	<key>readme</key>

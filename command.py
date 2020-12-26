@@ -7,7 +7,7 @@ from workflow import Workflow, ICON_WEB, ICON_WARNING, ICON_SWITCH, ICON_HOME, I
 from workflow.notify import notify
 
 log = None
-
+__version__ = '0.1'
 
 def st_api(api_key, url, params=None, method='GET', data=None):
     url = 'https://api.smartthings.com/v1/'+url
@@ -276,7 +276,13 @@ def main(wf):
 
 
 if __name__ == u"__main__":
-    wf = Workflow()
+    wf = Workflow(update_settings={
+        'github_slug': 'schwark/alfred-smartthings-py',
+        'version': __version__
+    })
     log = wf.logger
+    if wf.update_available:
+        # Download new version and tell Alfred to install it
+        wf.start_update()
     sys.exit(wf.run(main))
     
