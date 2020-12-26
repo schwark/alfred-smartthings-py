@@ -7,7 +7,10 @@ from workflow import Workflow, ICON_WEB, ICON_WARNING, ICON_SWITCH, ICON_HOME, I
 from workflow.notify import notify
 
 log = None
-__version__ = '0.1'
+__version__ = '0.2'
+
+def qnotify(title, text):
+    print(text)
 
 def st_api(api_key, url, params=None, method='GET', data=None):
     url = 'https://api.smartthings.com/v1/'+url
@@ -107,7 +110,7 @@ def handle_switch_commands(api_key, args, commands):
     result = st_api(api_key,'devices/'+args.device_uid+'/commands', None, 'POST', data)
     result = (result and result['results']  and len(result['results']) > 0 and result['results'][0]['status'] and 'ACCEPTED' == result['results'][0]['status'])
     if result:
-        notify("SmartThings", args.device_name+" turned "+args.device_command)
+        qnotify("SmartThings", args.device_name+" turned "+args.device_command)
     log.debug("Switch Command "+args.device_name+" "+args.device_command+" "+("succeeded" if result else "failed"))
     return result
 
@@ -118,7 +121,7 @@ def handle_scene_commands(api_key, args):
     result = st_api(api_key,'scenes/'+args.scene_uid+'/execute', None, 'POST')
     result = (result and result['status'] and 'success' == result['status'])
     if result:
-        notify("SmartThings", "Ran "+args.scene_name)
+        qnotify("SmartThings", "Ran "+args.scene_name)
     log.debug("Scene Command "+args.scene_name+" "+("succeeded" if result else "failed"))
     return result
 
@@ -178,7 +181,7 @@ def main(wf):
     if args.reinit:
         wf.reset()
         wf.delete_password('smartthings_api_key')
-        notify('SmartThings', 'Workflow reinitialized')
+        qnotify('SmartThings', 'Workflow reinitialized')
         return 0
 
     ####################################################################
@@ -190,7 +193,7 @@ def main(wf):
         log.debug("saving api key "+args.apikey)
         # save the key
         wf.save_password('smartthings_api_key', args.apikey)
-        notify('SmartThings', 'API Key Saved')
+        qnotify('SmartThings', 'API Key Saved')
         return 0  # 0 means script exited cleanly
 
     ####################################################################
@@ -214,7 +217,7 @@ def main(wf):
         scenes = get_scenes(api_key)
         wf.store_data('devices', devices)
         wf.store_data('scenes', scenes)
-        notify('SmartThings', 'Devices and Scenes updated')
+        qnotify('SmartThings', 'Devices and Scenes updated')
         return 0  # 0 means script exited cleanly
 
    # handle any device or scene commands there may be
