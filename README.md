@@ -6,7 +6,8 @@ Alfred  Workflow for new SmartThings API in python for a smaller workflow - only
 * Can also be downloaded from github as a zip file, unzip the downloaded zip, cd into the zip directory, and create a new zip with all the files in that folder, and then renamed to Smartthings.alfredworkflow
 * Or you can use the workflow-build script in the folder, using
 ```
-workflow-build . 
+chmod +x workflow-build
+./workflow-build . 
 ```
 * You will need a personal access token from the SmartThings Developer Portal at https://account.smartthings.com/tokens
 
