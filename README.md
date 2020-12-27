@@ -2,9 +2,13 @@
 Alfred  Workflow for new SmartThings API in python for a smaller workflow - only supports switches and scenes at the moment
 ## Install
 
-Can be installed from Packal at http://www.packal.org/workflow/smartthings-new-api-workflow
-Can also be downloaded from github as a zip file and renamed to Smartthings.alfredworkflow 
-You will need a personal access token from the SmartThings Developer Portal at https://account.smartthings.com/tokens
+* Can be installed from Packal at http://www.packal.org/workflow/smartthings-new-api-workflow
+* Can also be downloaded from github as a zip file, unzip the downloaded zip, cd into the zip directory, and create a new zip with all the files in that folder, and then renamed to Smartthings.alfredworkflow
+* Or you can use the workflow-build script in the folder, using
+```
+workflow-build . 
+```
+* You will need a personal access token from the SmartThings Developer Portal at https://account.smartthings.com/tokens
 
 ## API Key
 
@@ -33,3 +37,10 @@ Turns the Switch on or off - clicking switch name autocompletes switch name and 
 st <scene-name>
 ```
 Runs the scene - clicking scene name autocompletes scene name and runs the scene and notifies upon success
+
+## Reinitialize
+
+```
+st reinit
+```
+This should only be needed if you ever want to start again for whatever reason - removes all API keys, devices, scenes, etc.
