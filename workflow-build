@@ -135,6 +135,9 @@ def build_workflow(workflow_dir, outputdir, overwrite=False, verbose=False):
             # Read workflow metadata from info.plist
             info = plistlib.readPlist(u'info.plist')
             version = info.get('version')
+            if not version and os.path.exists('version'):
+                with open('version', 'r') as file:
+                    version = file.read().replace('\n', '')
             name = safename(info['name'])
             zippath = os.path.join(outputdir, name)
             if version:

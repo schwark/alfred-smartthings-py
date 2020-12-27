@@ -6,7 +6,6 @@ import argparse
 from workflow import Workflow, ICON_WEB, ICON_WARNING, ICON_SWITCH, ICON_HOME, ICON_COLOR, ICON_INFO, ICON_SYNC, web, PasswordNotFound
 
 log = None
-__version__ = '1.0.3'
 
 def qnotify(title, text):
     print(text)
@@ -279,8 +278,7 @@ def main(wf):
 
 if __name__ == u"__main__":
     wf = Workflow(update_settings={
-        'github_slug': 'schwark/alfred-smartthings-py',
-        'version': __version__
+        'github_slug': 'schwark/alfred-smartthings-py'
     })
     log = wf.logger
     if wf.update_available:
