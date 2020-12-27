@@ -170,6 +170,14 @@ def main(wf):
 
     log.debug("args are "+str(args))
 
+    # Check for an update and if available add an item to results
+    if wf.update_available:
+        # Add a notification to top of Script Filter results
+        wf.add_item('New version available',
+            'Action this item to install the update',
+            autocomplete='workflow:update',
+            icon=ICON_INFO)
+
     # check to see if any config commands - non device/scene commands are needed
     if(handle_config(args)):
         # if command was  handled, exit cleanly  now
@@ -281,11 +289,5 @@ if __name__ == u"__main__":
         'github_slug': 'schwark/alfred-smartthings-py'
     })
     log = wf.logger
-    if wf.update_available:
-        # Add a notification to top of Script Filter results
-        wf.add_item('New version available',
-                'Action this item to install the update',
-                autocomplete='workflow:update',
-                icon=ICON_INFO)
     sys.exit(wf.run(main))
     
