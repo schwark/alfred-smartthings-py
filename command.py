@@ -4,10 +4,9 @@ import sys
 import re
 import argparse
 from workflow import Workflow, ICON_WEB, ICON_WARNING, ICON_SWITCH, ICON_HOME, ICON_COLOR, ICON_INFO, ICON_SYNC, web, PasswordNotFound
-from workflow.notify import notify
 
 log = None
-__version__ = '0.2'
+__version__ = '1.0.3'
 
 def qnotify(title, text):
     print(text)
@@ -285,7 +284,10 @@ if __name__ == u"__main__":
     })
     log = wf.logger
     if wf.update_available:
-        # Download new version and tell Alfred to install it
-        wf.start_update()
+        # Add a notification to top of Script Filter results
+        wf.add_item('New version available',
+                'Action this item to install the update',
+                autocomplete='workflow:update',
+                icon=ICON_INFO)
     sys.exit(wf.run(main))
     
