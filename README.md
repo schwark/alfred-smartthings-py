@@ -45,3 +45,10 @@ Runs the scene - clicking scene name autocompletes scene name and runs the scene
 st reinit
 ```
 This should only be needed if you ever want to start again for whatever reason - removes all API keys, devices, scenes, etc.
+
+## Update
+
+```
+st workflow:update
+```
+An update notification should show up when an update is available, but if not invoking this should update the workflow to latest version on github
