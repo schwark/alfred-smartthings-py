@@ -11,6 +11,10 @@ log = None
 def qnotify(title, text):
     print(text)
 
+def error(text):
+    print(text)
+    exit(0)
+
 def get_device(device_uid):
     devices = wf.stored_data('devices')
     return next((x for x in devices if device_uid == x['deviceId']), None)
@@ -59,15 +63,20 @@ def get_scenes(api_key):
     """
     return st_api(api_key, 'scenes', dict(max=10000))['items']
 
+def get_device_capabilities(device):
+    capabilities = []
+    if device['components'] and len(device['components']) >  0 and \
+        device['components'][0]['capabilities'] and len(device['components'][0]['capabilities']) > 0:
+            capabilities = map( lambda x: x['id'], device['components'][0]['capabilities'])
+    return capabilities
+
 def search_key_for_device(device):
     """Generate a string search key for a switch"""
     supported_devices = ['switch', 'switchLevel', 'lock']
     elements = []
-    if device['components'] and len(device['components']) >  0 and \
-        device['components'][0]['capabilities'] and len(device['components'][0]['capabilities']) > 0:
-            capabilities = map( lambda x: x['id'], device['components'][0]['capabilities'])
-            if len(list(set(capabilities) & set(supported_devices))) > 0:
-                elements.append(device['label'])  # label of device
+    capabilities = get_device_capabilities(device)
+    if len(list(set(capabilities) & set(supported_devices))) > 0:
+        elements.append(device['label'])  # label of device
     return u' '.join(elements)
 
 def search_key_for_scene(scene):
@@ -108,11 +117,16 @@ def handle_config(args):
         return True
     return False
 
-def handle_switch_commands(api_key, args, commands):
+def handle_device_commands(api_key, args, commands):
     if not args.device_uid or args.device_command not in commands.keys():
         return 
     command = commands[args.device_command]
 
+    device = get_device(args.device_uid)
+    capabilities = get_device_capabilities(device)
+    if command['capability'] not in capabilities:
+        error('Unsupported command for device')
+        
     # eval all lambdas in arguments
     if 'arguments' in command and command['arguments']:
         for i, value in enumerate(command['arguments']):
@@ -266,7 +280,7 @@ def main(wf):
         return 0  # 0 means script exited cleanly
 
    # handle any device or scene commands there may be
-    handle_switch_commands(api_key, args, commands)
+    handle_device_commands(api_key, args, commands)
     handle_scene_commands(api_key, args)
 
     # since this i now sure to be a device/scene query, fix args if there is a device/scene command in there
