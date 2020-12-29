@@ -134,6 +134,7 @@ def handle_device_commands(api_key, args, commands):
     command = commands[args.device_command]
 
     device = get_device(args.device_uid)
+    device_name = device['label']
     capabilities = get_device_capabilities(device)
     if command['capability'] not in capabilities:
         error('Unsupported command for device')
@@ -145,23 +146,25 @@ def handle_device_commands(api_key, args, commands):
                 command['arguments'][i] = value()
 
     data = {'commands': [command]}
-    log.debug("Executing Switch Command: "+args.device_name+" "+args.device_command)
+    log.debug("Executing Switch Command: "+device_name+" "+args.device_command)
     result = st_api(api_key,'devices/'+args.device_uid+'/commands', None, 'POST', data)
     result = (result and result['results']  and len(result['results']) > 0 and result['results'][0]['status'] and 'ACCEPTED' == result['results'][0]['status'])
     if result:
-        qnotify("SmartThings", args.device_name+" turned "+args.device_command)
-    log.debug("Switch Command "+args.device_name+" "+args.device_command+" "+("succeeded" if result else "failed"))
+        qnotify("SmartThings", device_name+" turned "+args.device_command)
+    log.debug("Switch Command "+device_name+" "+args.device_command+" "+("succeeded" if result else "failed"))
     return result
 
 def handle_scene_commands(api_key, args):
     if not args.scene_uid:
         return 
-    log.debug("Executing Scene Command: "+args.scene_name)
+    scene = get_scene(args.scene_uid)
+    scene_name = scene['sceneName']
+    log.debug("Executing Scene Command: "+scene_name)
     result = st_api(api_key,'scenes/'+args.scene_uid+'/execute', None, 'POST')
     result = (result and result['status'] and 'success' == result['status'])
     if result:
-        qnotify("SmartThings", "Ran "+args.scene_name)
-    log.debug("Scene Command "+args.scene_name+" "+("succeeded" if result else "failed"))
+        qnotify("SmartThings", "Ran "+scene_name)
+    log.debug("Scene Command "+scene_name+" "+("succeeded" if result else "failed"))
     return result
 
 
@@ -227,12 +230,10 @@ def main(wf):
     # reinitialize 
     parser.add_argument('--reinit', dest='reinit', action='store_true', default=False)
     # device name, uid, command and any command params
-    parser.add_argument('--device-name', dest='device_name', default=None)
     parser.add_argument('--device-uid', dest='device_uid', default=None)
     parser.add_argument('--device-command', dest='device_command', default='')
     parser.add_argument('--device-params', dest='device_params', nargs='*', default=[])
     # scene name, uid, command and any command params
-    parser.add_argument('--scene-name', dest='scene_name', default=None)
     parser.add_argument('--scene-uid', dest='scene_uid', default=None)
 
     # add an optional query and save it to 'query'
@@ -336,7 +337,7 @@ def main(wf):
         for device in devices:
             wf.add_item(title=device['label'],
                     subtitle='Turn '+device['label']+' '+args.device_command+' '+(' '.join(args.device_params) if args.device_params else ''),
-                    arg='--device-name "'+device['label']+'" --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+(' '.join(args.device_params)),
+                    arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+(' '.join(args.device_params)),
                     autocomplete=device['label'],
                     valid=args.device_command in commands,
                     icon=ICON_SWITCH)
@@ -346,7 +347,7 @@ def main(wf):
         for scene in scenes:
             wf.add_item(title=scene['sceneName'],
                     subtitle='Run '+scene['sceneName'],
-                    arg='--scene-name "'+scene['sceneName']+'" --scene-uid '+scene['sceneId'],
+                    arg=' --scene-uid '+scene['sceneId'],
                     autocomplete=scene['sceneName'],
                     valid=True,
                     icon=ICON_COLOR)
