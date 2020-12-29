@@ -32,6 +32,20 @@ st <switch-name> on|off
 ```
 Turns the Switch on or off - clicking switch name autocompletes switch name and waits for command. If both name and command are provided, executes command and notifies upon success
 
+## Dimmer Commands
+
+```
+st <switch-name> dim <dim-level [0-100]>
+```
+Turns the dimmer to dim level specified - clicking switch name autocompletes switch name and waits for command. If both name and command are provided, executes command and notifies upon success
+
+## Lock Commands
+
+```
+st <lock-name> lock|unlock
+```
+Causes the lock to lock or unlock  - clicking lock name autocompletes switch name and waits for command. If both name and command are provided, executes command and notifies upon success
+
 ## Scene Commands
 
 ```
