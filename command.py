@@ -53,7 +53,18 @@ def get_devices(api_key):
     Returns a has of devices.
 
     """
-    return st_api(api_key, 'devices', dict(max=10000))['items']
+    items = []
+    i = 0
+    while True:
+        result = st_api(api_key, 'devices', dict(max=200, page=i))
+        if 'items' in result:
+            items.extend(result['items'])
+        if '_links' in result and 'next' in result['_links']:
+            i += 1
+        else:
+            break
+
+    return items
 
 def get_scenes(api_key):
     """Retrieve all scenes
