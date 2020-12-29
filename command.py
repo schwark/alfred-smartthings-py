@@ -3,6 +3,7 @@
 import sys
 import re
 import argparse
+import json
 from workflow import Workflow, ICON_WEB, ICON_WARNING, ICON_SWITCH, ICON_HOME, ICON_COLOR, ICON_INFO, ICON_SYNC, web, PasswordNotFound
 
 log = None
@@ -10,16 +11,29 @@ log = None
 def qnotify(title, text):
     print(text)
 
+def get_device(device_uid):
+    devices = wf.stored_data('devices')
+    return next((x for x in devices if device_uid == x['deviceId']), None)
+
+def get_scene(scene_uid):
+    scenes = wf.stored_data('scenes')
+    return next((x for x in scenes if scene_uid == x['sceneId']), None)
+
 def st_api(api_key, url, params=None, method='GET', data=None):
     url = 'https://api.smartthings.com/v1/'+url
-    headers = dict(Authorization='Bearer '+api_key)
+    headers = {'Authorization':'Bearer '+api_key,'Accept':"application/json"}
     r = None
 
     if('GET' == method):
         r = web.get(url, params, headers)
     else:
+        headers['Content-type'] = "application/json"
+        if data and isinstance(data, dict):
+            data = json.dumps(data)
+        log.debug("posting with data "+data)
         r = web.post(url, params, data, headers)
 
+    log.debug("st_api: url:"+url+", method: "+method+",  headers: "+str(headers)+", params: "+str(params)+", data: "+str(data))
     # throw an error if request failed
     # Workflow will catch this and show it to the user
     r.raise_for_status()
@@ -45,13 +59,15 @@ def get_scenes(api_key):
     """
     return st_api(api_key, 'scenes', dict(max=10000))['items']
 
-def search_key_for_switch(device):
+def search_key_for_device(device):
     """Generate a string search key for a switch"""
+    supported_devices = ['switch', 'switchLevel', 'lock']
     elements = []
     if device['components'] and len(device['components']) >  0 and \
-        device['components'][0]['capabilities'] and len(device['components'][0]['capabilities']) > 1 and \
-            'switch' == device['components'][0]['capabilities'][0]['id']:
-        elements.append(device['label'])  # label of device
+        device['components'][0]['capabilities'] and len(device['components'][0]['capabilities']) > 0:
+            capabilities = map( lambda x: x['id'], device['components'][0]['capabilities'])
+            if len(list(set(capabilities) & set(supported_devices))) > 0:
+                elements.append(device['label'])  # label of device
     return u' '.join(elements)
 
 def search_key_for_scene(scene):
@@ -93,17 +109,17 @@ def handle_config(args):
     return False
 
 def handle_switch_commands(api_key, args, commands):
-    if not args.device_uid or args.device_command not in commands:
+    if not args.device_uid or args.device_command not in commands.keys():
         return 
-    data = """{{
-"commands": [
-{{
-    "component": "main",
-    "capability": "switch",
-    "command": "{cmd}"
-}}
-]
-}}""".format(cmd=args.device_command)
+    command = commands[args.device_command]
+
+    # eval all lambdas in arguments
+    if 'arguments' in command and command['arguments']:
+        for i, value in enumerate(command['arguments']):
+            if callable(value):
+                command['arguments'][i] = value()
+
+    data = {'commands': [command]}
     log.debug("Executing Switch Command: "+args.device_name+" "+args.device_command)
     result = st_api(api_key,'devices/'+args.device_uid+'/commands', None, 'POST', data)
     result = (result and result['results']  and len(result['results']) > 0 and result['results'][0]['status'] and 'ACCEPTED' == result['results'][0]['status'])
@@ -125,22 +141,53 @@ def handle_scene_commands(api_key, args):
 
 
 def extract_commands(args, commands):
+    command_list = commands.keys()
     # reset command
-    if args.device_command not in commands:
+    if args.device_command not in command_list:
         args.device_command = ''
     if args.query:
-        parts = re.split('\s+('+'|'.join(commands)+')(?i)', args.query)
+        parts = re.split('\s+('+'|'.join(command_list)+')(?i)', args.query)
         log.debug("query parts are "+str(parts))
         args.query = parts[0]
         if(len(parts) > 1):
             args.device_command = parts[1].lower()
         if(len(parts) > 2):
-            args.device_param = parts[2].lower()
+            args.device_params = parts[2].lower().split()
     return args
 
 def main(wf):
     # list of commands
-    commands = ['on', 'off']
+    commands = {
+        'on': {
+                'component': 'main',
+                'capability': 'switch',
+                'command': 'on'
+        }, 
+        'off': {
+                'component': 'main',
+                'capability': 'switch',
+                'command': 'off'
+        },
+        'dim': {
+                'component': 'main',
+                'capability': 'switchLevel',
+                'command': 'setLevel',
+                'arguments': [
+                    lambda: int(args.device_params[0]),
+                ]
+        },
+        'lock': {
+                'component': 'main',
+                'capability': 'lock',
+                'command': 'lock'
+        }, 
+        'unlock': {
+                'component': 'main',
+                'capability': 'lock',
+                'command': 'unlock'
+        }
+    }
+
     # build argument parser to parse script args and collect their
     # values
     parser = argparse.ArgumentParser()
@@ -158,7 +205,7 @@ def main(wf):
     parser.add_argument('--device-name', dest='device_name', default=None)
     parser.add_argument('--device-uid', dest='device_uid', default=None)
     parser.add_argument('--device-command', dest='device_command', default='')
-    parser.add_argument('--device-param', dest='device_param', default='')
+    parser.add_argument('--device-params', dest='device_params', nargs='*', default=[])
     # scene name, uid, command and any command params
     parser.add_argument('--scene-name', dest='scene_name', default=None)
     parser.add_argument('--scene-uid', dest='scene_uid', default=None)
@@ -169,14 +216,6 @@ def main(wf):
     args = parser.parse_args(wf.args)
 
     log.debug("args are "+str(args))
-
-    # Check for an update and if available add an item to results
-    if wf.update_available:
-        # Add a notification to top of Script Filter results
-        wf.add_item('New version available',
-            'Action this item to install the update',
-            autocomplete='workflow:update',
-            icon=ICON_INFO)
 
     # check to see if any config commands - non device/scene commands are needed
     if(handle_config(args)):
@@ -230,7 +269,7 @@ def main(wf):
     handle_switch_commands(api_key, args, commands)
     handle_scene_commands(api_key, args)
 
-    # since this ia now sure to be a device/scene query, fix args if there is a device/scene command in there
+    # since this i now sure to be a device/scene query, fix args if there is a device/scene command in there
     args = extract_commands(args, commands)
  
     # update query post extraction
@@ -239,6 +278,14 @@ def main(wf):
     ####################################################################
     # View/filter devices or scenes
     ####################################################################
+
+    # Check for an update and if available add an item to results
+    if wf.update_available:
+        # Add a notification to top of Script Filter results
+        wf.add_item('New version available',
+            'Action this item to install the update',
+            autocomplete='workflow:update',
+            icon=ICON_INFO)
 
     # retrieve cached devices and scenes
     devices = wf.stored_data('devices')
@@ -256,16 +303,16 @@ def main(wf):
 
     # If script was passed a query, use it to filter posts
     if query:
-        switches = wf.filter(query, devices, key=search_key_for_switch, min_score=20)
+        devices = wf.filter(query, devices, key=search_key_for_device, min_score=20)
         scenes = wf.filter(query, scenes, key=search_key_for_scene, min_score=20)
 
         # Loop through the returned switches and add an item for each to
         # the list of results for Alfred
-        for switch in switches:
-            wf.add_item(title=switch['label'],
-                    subtitle='Turn '+switch['label']+' '+args.device_command,
-                    arg='--device-name "'+switch['label']+'" --device-uid '+switch['deviceId']+' --device-command '+args.device_command,
-                    autocomplete=switch['label'],
+        for device in devices:
+            wf.add_item(title=device['label'],
+                    subtitle='Turn '+device['label']+' '+args.device_command+' '+(' '.join(args.device_params) if args.device_params else ''),
+                    arg='--device-name "'+device['label']+'" --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+(' '.join(args.device_params)),
+                    autocomplete=device['label'],
                     valid=args.device_command in commands,
                     icon=ICON_SWITCH)
 
