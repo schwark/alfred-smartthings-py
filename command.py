@@ -74,157 +74,13 @@ def get_scenes(api_key):
     """
     return st_api(api_key, 'scenes', dict(max=200))['items']
 
-def get_color(name):
-    colors = {
-        "aliceblue": "#f0f8ff",
-        "antiquewhite": "#faebd7",
-        "aqua": "#00ffff",
-        "aquamarine": "#7fffd4",
-        "azure": "#f0ffff",
-        "beige": "#f5f5dc",
-        "bisque": "#ffe4c4",
-        "black": "#000000",
-        "blanchedalmond": "#ffebcd",
-        "blue": "#0000ff",
-        "blueviolet": "#8a2be2",
-        "brown": "#a52a2a",
-        "burlywood": "#deb887",
-        "cadetblue": "#5f9ea0",
-        "chartreuse": "#7fff00",
-        "chocolate": "#d2691e",
-        "coral": "#ff7f50",
-        "cornflowerblue": "#6495ed",
-        "cornsilk": "#fff8dc",
-        "crimson": "#dc143c",
-        "cyan": "#00ffff",
-        "darkblue": "#00008b",
-        "darkcyan": "#008b8b",
-        "darkgoldenrod": "#b8860b",
-        "darkgray": "#a9a9a9",
-        "darkgreen": "#006400",
-        "darkgrey": "#a9a9a9",
-        "darkkhaki": "#bdb76b",
-        "darkmagenta": "#8b008b",
-        "darkolivegreen": "#556b2f",
-        "darkorange": "#ff8c00",
-        "darkorchid": "#9932cc",
-        "darkred": "#8b0000",
-        "darksalmon": "#e9967a",
-        "darkseagreen": "#8fbc8f",
-        "darkslateblue": "#483d8b",
-        "darkslategray": "#2f4f4f",
-        "darkslategrey": "#2f4f4f",
-        "darkturquoise": "#00ced1",
-        "darkviolet": "#9400d3",
-        "deeppink": "#ff1493",
-        "deepskyblue": "#00bfff",
-        "dimgray": "#696969",
-        "dimgrey": "#696969",
-        "dodgerblue": "#1e90ff",
-        "firebrick": "#b22222",
-        "floralwhite": "#fffaf0",
-        "forestgreen": "#228b22",
-        "fuchsia": "#ff00ff",
-        "gainsboro": "#dcdcdc",
-        "ghostwhite": "#f8f8ff",
-        "goldenrod": "#daa520",
-        "gold": "#ffd700",
-        "gray": "#808080",
-        "green": "#008000",
-        "greenyellow": "#adff2f",
-        "grey": "#808080",
-        "honeydew": "#f0fff0",
-        "hotpink": "#ff69b4",
-        "indianred": "#cd5c5c",
-        "indigo": "#4b0082",
-        "ivory": "#fffff0",
-        "khaki": "#f0e68c",
-        "lavenderblush": "#fff0f5",
-        "lavender": "#e6e6fa",
-        "lawngreen": "#7cfc00",
-        "lemonchiffon": "#fffacd",
-        "lightblue": "#add8e6",
-        "lightcoral": "#f08080",
-        "lightcyan": "#e0ffff",
-        "lightgoldenrodyellow": "#fafad2",
-        "lightgray": "#d3d3d3",
-        "lightgreen": "#90ee90",
-        "lightgrey": "#d3d3d3",
-        "lightpink": "#ffb6c1",
-        "lightsalmon": "#ffa07a",
-        "lightseagreen": "#20b2aa",
-        "lightskyblue": "#87cefa",
-        "lightslategray": "#778899",
-        "lightslategrey": "#778899",
-        "lightsteelblue": "#b0c4de",
-        "lightyellow": "#ffffe0",
-        "lime": "#00ff00",
-        "limegreen": "#32cd32",
-        "linen": "#faf0e6",
-        "magenta": "#ff00ff",
-        "maroon": "#800000",
-        "mediumaquamarine": "#66cdaa",
-        "mediumblue": "#0000cd",
-        "mediumorchid": "#ba55d3",
-        "mediumpurple": "#9370db",
-        "mediumseagreen": "#3cb371",
-        "mediumslateblue": "#7b68ee",
-        "mediumspringgreen": "#00fa9a",
-        "mediumturquoise": "#48d1cc",
-        "mediumvioletred": "#c71585",
-        "midnightblue": "#191970",
-        "mintcream": "#f5fffa",
-        "mistyrose": "#ffe4e1",
-        "moccasin": "#ffe4b5",
-        "navajowhite": "#ffdead",
-        "navy": "#000080",
-        "oldlace": "#fdf5e6",
-        "olive": "#808000",
-        "olivedrab": "#6b8e23",
-        "orange": "#ffa500",
-        "orangered": "#ff4500",
-        "orchid": "#da70d6",
-        "palegoldenrod": "#eee8aa",
-        "palegreen": "#98fb98",
-        "paleturquoise": "#afeeee",
-        "palevioletred": "#db7093",
-        "papayawhip": "#ffefd5",
-        "peachpuff": "#ffdab9",
-        "peru": "#cd853f",
-        "pink": "#ffc0cb",
-        "plum": "#dda0dd",
-        "powderblue": "#b0e0e6",
-        "purple": "#800080",
-        "rebeccapurple": "#663399",
-        "red": "#ff0000",
-        "rosybrown": "#bc8f8f",
-        "royalblue": "#4169e1",
-        "saddlebrown": "#8b4513",
-        "salmon": "#fa8072",
-        "sandybrown": "#f4a460",
-        "seagreen": "#2e8b57",
-        "seashell": "#fff5ee",
-        "sienna": "#a0522d",
-        "silver": "#c0c0c0",
-        "skyblue": "#87ceeb",
-        "slateblue": "#6a5acd",
-        "slategray": "#708090",
-        "slategrey": "#708090",
-        "snow": "#fffafa",
-        "springgreen": "#00ff7f",
-        "steelblue": "#4682b4",
-        "tan": "#d2b48c",
-        "teal": "#008080",
-        "thistle": "#d8bfd8",
-        "tomato": "#ff6347",
-        "turquoise": "#40e0d0",
-        "violet": "#ee82ee",
-        "wheat": "#f5deb3",
-        "white": "#ffffff",
-        "whitesmoke": "#f5f5f5",
-        "yellow": "#ffff00",
-        "yellowgreen": "#9acd32"
-    }
+def get_colors():
+    r = web.get('https://raw.githubusercontent.com/jonathantneal/color-names/master/color-names.json')
+    flip_colors = r.json()
+    colors = {v.lower().replace(' ',''): k for k, v in flip_colors.items()}
+    return colors
+
+def get_color(name, colors):
     name = name.lower().replace(' ','')
     if re.match('[0-9a-f]{6}', name):
         return '#'+name.upper()
@@ -357,9 +213,43 @@ def extract_commands(args, wf, devices, commands):
             args.device_command = extra_words[0]
             args.query = minustwo_devices[0]['label']
             args.device_params = extra_words[1:]
+    log.debug("extract_commands: "+str(args))
     return args
 
 def main(wf):
+    # retrieve cached devices and scenes
+    devices = wf.stored_data('devices')
+    scenes = wf.stored_data('scenes')
+    colors = wf.stored_data('colors')
+
+    # build argument parser to parse script args and collect their
+    # values
+    parser = argparse.ArgumentParser()
+    # add an optional (nargs='?') --apikey argument and save its
+    # value to 'apikey' (dest). This will be called from a separate "Run Script"
+    # action with the API key
+    parser.add_argument('--apikey', dest='apikey', nargs='?', default=None)
+    # add an optional (nargs='?') --update argument and save its
+    # value to 'apikey' (dest). This will be called from a separate "Run Script"
+    # action with the API key
+    parser.add_argument('--update', dest='update', action='store_true', default=False)
+    # reinitialize 
+    parser.add_argument('--reinit', dest='reinit', action='store_true', default=False)
+    # device name, uid, command and any command params
+    parser.add_argument('--device-uid', dest='device_uid', default=None)
+    parser.add_argument('--device-command', dest='device_command', default='')
+    parser.add_argument('--device-params', dest='device_params', nargs='*', default=[])
+    # scene name, uid, command and any command params
+    parser.add_argument('--scene-uid', dest='scene_uid', default=None)
+
+    # add an optional query and save it to 'query'
+    parser.add_argument('query', nargs='?', default=None)
+    # parse the script's arguments
+    args = parser.parse_args(wf.args)
+
+    log.debug("args are "+str(args))
+
+
     # list of commands
     commands = {
         'on': {
@@ -396,38 +286,18 @@ def main(wf):
                 'command': 'setColor',
                 'arguments': [
                     {
-                        'hex': lambda: get_color(args.device_params[0])
+                        'hex': lambda: get_color(args.device_params[0], colors)
                     }
                 ]
         }
     }
 
-    # build argument parser to parse script args and collect their
-    # values
-    parser = argparse.ArgumentParser()
-    # add an optional (nargs='?') --apikey argument and save its
-    # value to 'apikey' (dest). This will be called from a separate "Run Script"
-    # action with the API key
-    parser.add_argument('--apikey', dest='apikey', nargs='?', default=None)
-    # add an optional (nargs='?') --update argument and save its
-    # value to 'apikey' (dest). This will be called from a separate "Run Script"
-    # action with the API key
-    parser.add_argument('--update', dest='update', action='store_true', default=False)
-    # reinitialize 
-    parser.add_argument('--reinit', dest='reinit', action='store_true', default=False)
-    # device name, uid, command and any command params
-    parser.add_argument('--device-uid', dest='device_uid', default=None)
-    parser.add_argument('--device-command', dest='device_command', default='')
-    parser.add_argument('--device-params', dest='device_params', nargs='*', default=[])
-    # scene name, uid, command and any command params
-    parser.add_argument('--scene-uid', dest='scene_uid', default=None)
+    command_params = {
+        'color': {
+            'values': colors.keys() if colors else []
+        }
+    }
 
-    # add an optional query and save it to 'query'
-    parser.add_argument('query', nargs='?', default=None)
-    # parse the script's arguments
-    args = parser.parse_args(wf.args)
-
-    log.debug("args are "+str(args))
 
     # check to see if any config commands - non device/scene commands are needed
     if(handle_config(args)):
@@ -472,18 +342,16 @@ def main(wf):
         # update devices and scenes
         devices = get_devices(api_key)
         scenes = get_scenes(api_key)
+        colors = get_colors()
         wf.store_data('devices', devices)
         wf.store_data('scenes', scenes)
+        wf.store_data('colors', colors)
         qnotify('SmartThings', 'Devices and Scenes updated')
         return 0  # 0 means script exited cleanly
 
    # handle any device or scene commands there may be
     handle_device_commands(api_key, args, commands)
     handle_scene_commands(api_key, args)
-
-    # retrieve cached devices and scenes
-    devices = wf.stored_data('devices')
-    scenes = wf.stored_data('scenes')
 
     # since this i now sure to be a device/scene query, fix args if there is a device/scene command in there
     args = extract_commands(args, wf, devices, commands)
@@ -520,17 +388,7 @@ def main(wf):
         scenes = wf.filter(query, scenes, key=search_key_for_scene, min_score=20)
 
         if devices:
-            if len(devices) > 1:
-                # Loop through the returned devices and add an item for each to
-                # the list of results for Alfred
-                for device in devices:
-                    wf.add_item(title=device['label'],
-                            subtitle='Turn '+device['label']+' '+args.device_command+' '+(' '.join(args.device_params) if args.device_params else ''),
-                            arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+(' '.join(args.device_params)),
-                            autocomplete=device['label'],
-                            valid=args.device_command in commands,
-                            icon=ICON_SWITCH)
-            elif not args.device_command or args.device_command not in commands:
+            if 1 == len(devices) and (not args.device_command or args.device_command not in commands):
                 # Single device only, no command or not complete command yet so populate with all the commands
                 device = devices[0]
                 device_commands = get_device_commands(device, commands)
@@ -542,15 +400,31 @@ def main(wf):
                             autocomplete=device['label']+' '+command,
                             valid='arguments' not in commands[command] or args.device_params,
                             icon=ICON_SWITCH)
-            else:
+            elif 1 == len(devices) and (args.device_command and args.device_command in commands and args.device_command in command_params):
                 # single device and has command already - populate with params?
                 device = devices[0]
-                wf.add_item(title=device['label'],
-                        subtitle='Turn '+device['label']+' '+args.device_command+' '+(' '.join(args.device_params) if args.device_params else ''),
-                        arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+(' '.join(args.device_params)),
-                        autocomplete=device['label']+' '+args.device_command,
-                        valid='arguments' not in commands[args.device_command] or args.device_params,
-                        icon=ICON_SWITCH)
+                param_list = command_params[args.device_command]['values']
+                param_start = args.device_params[0] if args.device_params else ''
+                param_list = list(filter(lambda x: x.startswith(param_start), param_list))
+                param_list.sort()
+                for param in param_list:
+                    wf.add_item(title=device['label'],
+                            subtitle='Turn '+device['label']+' '+args.device_command+' '+param,
+                            arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+param,
+                            autocomplete=device['label']+' '+args.device_command,
+                            valid=True,
+                            icon=ICON_SWITCH)
+            else:
+                # Loop through the returned devices and add an item for each to
+                # the list of results for Alfred
+                for device in devices:
+                    wf.add_item(title=device['label'],
+                            subtitle='Turn '+device['label']+' '+args.device_command+' '+(' '.join(args.device_params) if args.device_params else ''),
+                            arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+(' '.join(args.device_params)),
+                            autocomplete=device['label'],
+                            valid=args.device_command in commands,
+                            icon=ICON_SWITCH)
+
 
         # Loop through the returned scenes and add an item for each to
         # the list of results for Alfred
