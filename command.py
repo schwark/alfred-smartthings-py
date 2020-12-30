@@ -7,6 +7,68 @@ import json
 from workflow import Workflow, ICON_WEB, ICON_WARNING, ICON_SWITCH, ICON_HOME, ICON_COLOR, ICON_INFO, ICON_SYNC, web, PasswordNotFound
 
 log = None
+# list of commands
+commands = {
+    'on': {
+            'component': 'main',
+            'capability': 'switch',
+            'command': 'on'
+    }, 
+    'off': {
+            'component': 'main',
+            'capability': 'switch',
+            'command': 'off'
+    },
+    'dim': {
+            'component': 'main',
+            'capability': 'switchLevel',
+            'command': 'setLevel',
+            'arguments': [
+                lambda: int(args.device_params[0]),
+            ]
+    },
+    'lock': {
+            'component': 'main',
+            'capability': 'lock',
+            'command': 'lock'
+    }, 
+    'unlock': {
+            'component': 'main',
+            'capability': 'lock',
+            'command': 'unlock'
+    },
+    'color': {
+            'component': 'main',
+            'capability': 'colorControl',
+            'command': 'setColor',
+            'arguments': [
+                {
+                    'hex': lambda: get_color(args.device_params[0])
+                }
+            ]
+    }
+}
+
+colors = {
+    'red': {'hex': '#FF0000'},
+    'blue': {'hex': '#0000FF'},
+    'white': {'hex': '#FFFFFF'},	
+    'silver': {'hex': '#C0C0C0'},
+    'gray':	{'hex': '#808080'},	
+    'black': {'hex': '#000000'},	
+    'red':	{'hex': '#FF0000'},	
+    'maroon': {'hex': '#800000'},
+    'yellow': {'hex': '#FFFF00'},
+    'olive': {'hex': '#808000'},
+    'lime':	{'hex': '#00FF00'},
+    'green': {'hex': '#008000'},
+    'aqua':	{'hex': '#00FFFF'},
+    'teal':	{'hex': '#008080'},
+    'navy':	{'hex': '#000080'},
+    'fuchsia': {'hex': '#FF00FF'},
+    'purple': {'hex': '#800080'}
+}
+
 
 def qnotify(title, text):
     print(text)
@@ -72,21 +134,29 @@ def get_scenes(api_key):
     Returns a has of scenes.
 
     """
-    return st_api(api_key, 'scenes', dict(max=10000))['items']
+    return st_api(api_key, 'scenes', dict(max=200))['items']
+
+def get_color(name):
+    if re.match('[0-9a-f]{6}', name, re.IGNORECASE):
+        return '#'+name.upper()
+    elif name.lower() in colors:
+        return colors[name.lower()]['hex']
+    return ''
 
 def get_device_capabilities(device):
     capabilities = []
     if device['components'] and len(device['components']) >  0 and \
         device['components'][0]['capabilities'] and len(device['components'][0]['capabilities']) > 0:
-            capabilities = map( lambda x: x['id'], device['components'][0]['capabilities'])
+            capabilities = list(map( lambda x: x['id'], device['components'][0]['capabilities']))
     return capabilities
 
 def search_key_for_device(device):
     """Generate a string search key for a switch"""
-    supported_devices = ['switch', 'switchLevel', 'lock']
     elements = []
+    supported_capabilities = set(map(lambda x: x[1]['capability'], commands.items()))
+    #log.debug("supported capabilities are : "+str(supported_capabilities))
     capabilities = get_device_capabilities(device)
-    if len(list(set(capabilities) & set(supported_devices))) > 0:
+    if len(list(set(capabilities) & supported_capabilities)) > 0:
         elements.append(device['label'])  # label of device
     return u' '.join(elements)
 
@@ -128,7 +198,16 @@ def handle_config(args):
         return True
     return False
 
-def handle_device_commands(api_key, args, commands):
+def get_device_commands(device):
+    result = []
+    capabilities = get_device_capabilities(device)
+    for capability in capabilities:
+        for command, map in commands.items():
+            if capability == map['capability']:
+                result.append(command) 
+    return result
+
+def handle_device_commands(api_key, args):
     if not args.device_uid or args.device_command not in commands.keys():
         return 
     command = commands[args.device_command]
@@ -141,9 +220,13 @@ def handle_device_commands(api_key, args, commands):
         
     # eval all lambdas in arguments
     if 'arguments' in command and command['arguments']:
-        for i, value in enumerate(command['arguments']):
-            if callable(value):
-                command['arguments'][i] = value()
+        for i, arg in enumerate(command['arguments']):
+            if callable(arg):
+                command['arguments'][i] = arg()
+            elif isinstance(arg, dict):
+                for key, value in arg.items():
+                    if callable(value):
+                        arg[key] = value()                
 
     data = {'commands': [command]}
     log.debug("Executing Switch Command: "+device_name+" "+args.device_command)
@@ -168,11 +251,17 @@ def handle_scene_commands(api_key, args):
     return result
 
 
-def extract_commands(args, commands):
+def extract_commands(args):
     command_list = commands.keys()
-    # reset command
-    if args.device_command not in command_list:
-        args.device_command = ''
+    words = args.query.split() if args.query else []
+    # check to see if last word could be command
+    if not args.device_command and len(words) > 1:
+        last_word = words[-1].lower()
+        log.debug("extract_commands: last word is "+last_word)
+        if len(list(filter(lambda x: x.startswith(last_word), command_list))) > 0:
+            log.debug("extract_commands: setting device_command to "+last_word)
+            args.device_command = last_word
+            args.query = args.query.replace(words[-1],'')
     if args.query:
         parts = re.split('\s+('+'|'.join(command_list)+')(?i)', args.query)
         log.debug("query parts are "+str(parts))
@@ -184,37 +273,6 @@ def extract_commands(args, commands):
     return args
 
 def main(wf):
-    # list of commands
-    commands = {
-        'on': {
-                'component': 'main',
-                'capability': 'switch',
-                'command': 'on'
-        }, 
-        'off': {
-                'component': 'main',
-                'capability': 'switch',
-                'command': 'off'
-        },
-        'dim': {
-                'component': 'main',
-                'capability': 'switchLevel',
-                'command': 'setLevel',
-                'arguments': [
-                    lambda: int(args.device_params[0]),
-                ]
-        },
-        'lock': {
-                'component': 'main',
-                'capability': 'lock',
-                'command': 'lock'
-        }, 
-        'unlock': {
-                'component': 'main',
-                'capability': 'lock',
-                'command': 'unlock'
-        }
-    }
 
     # build argument parser to parse script args and collect their
     # values
@@ -292,11 +350,11 @@ def main(wf):
         return 0  # 0 means script exited cleanly
 
    # handle any device or scene commands there may be
-    handle_device_commands(api_key, args, commands)
+    handle_device_commands(api_key, args)
     handle_scene_commands(api_key, args)
 
     # since this i now sure to be a device/scene query, fix args if there is a device/scene command in there
-    args = extract_commands(args, commands)
+    args = extract_commands(args)
  
     # update query post extraction
     query = args.query
@@ -332,15 +390,38 @@ def main(wf):
         devices = wf.filter(query, devices, key=search_key_for_device, min_score=20)
         scenes = wf.filter(query, scenes, key=search_key_for_scene, min_score=20)
 
-        # Loop through the returned switches and add an item for each to
-        # the list of results for Alfred
-        for device in devices:
-            wf.add_item(title=device['label'],
-                    subtitle='Turn '+device['label']+' '+args.device_command+' '+(' '.join(args.device_params) if args.device_params else ''),
-                    arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+(' '.join(args.device_params)),
-                    autocomplete=device['label'],
-                    valid=args.device_command in commands,
-                    icon=ICON_SWITCH)
+        if devices:
+            if len(devices) > 1:
+                # Loop through the returned devices and add an item for each to
+                # the list of results for Alfred
+                for device in devices:
+                    wf.add_item(title=device['label'],
+                            subtitle='Turn '+device['label']+' '+args.device_command+' '+(' '.join(args.device_params) if args.device_params else ''),
+                            arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+(' '.join(args.device_params)),
+                            autocomplete=device['label'],
+                            valid=args.device_command in commands,
+                            icon=ICON_SWITCH)
+            elif not args.device_command or args.device_command not in commands:
+                # Single device only, no command or not complete command yet so populate with all the commands
+                device = devices[0]
+                device_commands = get_device_commands(device)
+                device_commands = list(filter(lambda x: x.startswith(args.device_command), device_commands))
+                for command in device_commands:
+                    wf.add_item(title=device['label'],
+                            subtitle='Turn '+device['label']+' '+command+' '+(' '.join(args.device_params) if args.device_params else ''),
+                            arg=' --device-uid '+device['deviceId']+' --device-command '+command+' --device-params '+(' '.join(args.device_params)),
+                            autocomplete=device['label']+' '+command,
+                            valid='arguments' not in commands[command] or args.device_params,
+                            icon=ICON_SWITCH)
+            else:
+                # single device and has command already - populate with params?
+                device = devices[0]
+                wf.add_item(title=device['label'],
+                        subtitle='Turn '+device['label']+' '+args.device_command+' '+(' '.join(args.device_params) if args.device_params else ''),
+                        arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+(' '.join(args.device_params)),
+                        autocomplete=device['label']+' '+args.device_command,
+                        valid='arguments' not in commands[args.device_command] or args.device_params,
+                        icon=ICON_SWITCH)
 
         # Loop through the returned scenes and add an item for each to
         # the list of results for Alfred
