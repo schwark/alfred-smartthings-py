@@ -39,6 +39,14 @@ st <switch-name> dim <dim-level [0-100]>
 ```
 Turns the dimmer to dim level specified - clicking switch name autocompletes switch name and waits for command. If both name and command are provided, executes command and notifies upon success
 
+## Color Commands
+
+```
+st <switch-name> color <rgbhex or color-name>
+```
+Turns the light to color specified - clicking switch name autocompletes switch name and waits for command. If both name and command are provided, executes command and notifies upon success
+
+
 ## Lock Commands
 
 ```
