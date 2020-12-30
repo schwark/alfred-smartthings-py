@@ -7,68 +7,6 @@ import json
 from workflow import Workflow, ICON_WEB, ICON_WARNING, ICON_SWITCH, ICON_HOME, ICON_COLOR, ICON_INFO, ICON_SYNC, web, PasswordNotFound
 
 log = None
-# list of commands
-commands = {
-    'on': {
-            'component': 'main',
-            'capability': 'switch',
-            'command': 'on'
-    }, 
-    'off': {
-            'component': 'main',
-            'capability': 'switch',
-            'command': 'off'
-    },
-    'dim': {
-            'component': 'main',
-            'capability': 'switchLevel',
-            'command': 'setLevel',
-            'arguments': [
-                lambda: int(args.device_params[0]),
-            ]
-    },
-    'lock': {
-            'component': 'main',
-            'capability': 'lock',
-            'command': 'lock'
-    }, 
-    'unlock': {
-            'component': 'main',
-            'capability': 'lock',
-            'command': 'unlock'
-    },
-    'color': {
-            'component': 'main',
-            'capability': 'colorControl',
-            'command': 'setColor',
-            'arguments': [
-                {
-                    'hex': lambda: get_color(args.device_params[0])
-                }
-            ]
-    }
-}
-
-colors = {
-    'red': {'hex': '#FF0000'},
-    'blue': {'hex': '#0000FF'},
-    'white': {'hex': '#FFFFFF'},	
-    'silver': {'hex': '#C0C0C0'},
-    'gray':	{'hex': '#808080'},	
-    'black': {'hex': '#000000'},	
-    'red':	{'hex': '#FF0000'},	
-    'maroon': {'hex': '#800000'},
-    'yellow': {'hex': '#FFFF00'},
-    'olive': {'hex': '#808000'},
-    'lime':	{'hex': '#00FF00'},
-    'green': {'hex': '#008000'},
-    'aqua':	{'hex': '#00FFFF'},
-    'teal':	{'hex': '#008080'},
-    'navy':	{'hex': '#000080'},
-    'fuchsia': {'hex': '#FF00FF'},
-    'purple': {'hex': '#800080'}
-}
-
 
 def qnotify(title, text):
     print(text)
@@ -137,6 +75,25 @@ def get_scenes(api_key):
     return st_api(api_key, 'scenes', dict(max=200))['items']
 
 def get_color(name):
+    colors = {
+        'red': {'hex': '#FF0000'},
+        'blue': {'hex': '#0000FF'},
+        'white': {'hex': '#FFFFFF'},	
+        'silver': {'hex': '#C0C0C0'},
+        'gray':	{'hex': '#808080'},	
+        'black': {'hex': '#000000'},	
+        'red':	{'hex': '#FF0000'},	
+        'maroon': {'hex': '#800000'},
+        'yellow': {'hex': '#FFFF00'},
+        'olive': {'hex': '#808000'},
+        'lime':	{'hex': '#00FF00'},
+        'green': {'hex': '#008000'},
+        'aqua':	{'hex': '#00FFFF'},
+        'teal':	{'hex': '#008080'},
+        'navy':	{'hex': '#000080'},
+        'fuchsia': {'hex': '#FF00FF'},
+        'purple': {'hex': '#800080'}
+    }
     if re.match('[0-9a-f]{6}', name, re.IGNORECASE):
         return '#'+name.upper()
     elif name.lower() in colors:
@@ -150,7 +107,7 @@ def get_device_capabilities(device):
             capabilities = list(map( lambda x: x['id'], device['components'][0]['capabilities']))
     return capabilities
 
-def search_key_for_device(device):
+def search_key_for_device(device, commands):
     """Generate a string search key for a switch"""
     elements = []
     supported_capabilities = set(map(lambda x: x[1]['capability'], commands.items()))
@@ -198,7 +155,7 @@ def handle_config(args):
         return True
     return False
 
-def get_device_commands(device):
+def get_device_commands(device, commands):
     result = []
     capabilities = get_device_capabilities(device)
     for capability in capabilities:
@@ -207,7 +164,7 @@ def get_device_commands(device):
                 result.append(command) 
     return result
 
-def handle_device_commands(api_key, args):
+def handle_device_commands(api_key, args, commands):
     if not args.device_uid or args.device_command not in commands.keys():
         return 
     command = commands[args.device_command]
@@ -251,28 +208,67 @@ def handle_scene_commands(api_key, args):
     return result
 
 
-def extract_commands(args):
-    command_list = commands.keys()
+def extract_commands(args, wf, devices, commands):
     words = args.query.split() if args.query else []
-    # check to see if last word could be command
-    if not args.device_command and len(words) > 1:
-        last_word = words[-1].lower()
-        log.debug("extract_commands: last word is "+last_word)
-        if len(list(filter(lambda x: x.startswith(last_word), command_list))) > 0:
-            log.debug("extract_commands: setting device_command to "+last_word)
-            args.device_command = last_word
-            args.query = args.query.replace(words[-1],'')
-    if args.query:
-        parts = re.split('\s+('+'|'.join(command_list)+')(?i)', args.query)
-        log.debug("query parts are "+str(parts))
-        args.query = parts[0]
-        if(len(parts) > 1):
-            args.device_command = parts[1].lower()
-        if(len(parts) > 2):
-            args.device_params = parts[2].lower().split()
+    full_devices = wf.filter(args.query, devices, key=lambda x: search_key_for_device(x, commands), min_score=20)
+    minusone_devices = wf.filter(' '.join(words[0:-1]), devices, key=lambda x: search_key_for_device(x, commands), min_score=20)
+    minustwo_devices = wf.filter(' '.join(words[0:-2]), devices, key=lambda x: search_key_for_device(x, commands), min_score=20)
+    if 1 == len(minusone_devices) and 0 == len(full_devices):
+        extra_words = args.query.replace(minusone_devices[0]['label'],'').split()
+        if extra_words:
+            log.debug("extract_commands: setting command to "+extra_words[0])
+            args.device_command = extra_words[0]
+            args.query = minusone_devices[0]['label']
+    if 1 == len(minustwo_devices) and 0 == len(full_devices) and 0 == len(minusone_devices):
+        extra_words = args.query.replace(minustwo_devices[0]['label'],'').split()
+        if extra_words:
+            args.device_command = extra_words[0]
+            args.query = minustwo_devices[0]['label']
+            args.device_params = extra_words[1:]
     return args
 
 def main(wf):
+    # list of commands
+    commands = {
+        'on': {
+                'component': 'main',
+                'capability': 'switch',
+                'command': 'on'
+        }, 
+        'off': {
+                'component': 'main',
+                'capability': 'switch',
+                'command': 'off'
+        },
+        'dim': {
+                'component': 'main',
+                'capability': 'switchLevel',
+                'command': 'setLevel',
+                'arguments': [
+                    lambda: int(args.device_params[0]),
+                ]
+        },
+        'lock': {
+                'component': 'main',
+                'capability': 'lock',
+                'command': 'lock'
+        }, 
+        'unlock': {
+                'component': 'main',
+                'capability': 'lock',
+                'command': 'unlock'
+        },
+        'color': {
+                'component': 'main',
+                'capability': 'colorControl',
+                'command': 'setColor',
+                'arguments': [
+                    {
+                        'hex': lambda: get_color(args.device_params[0])
+                    }
+                ]
+        }
+    }
 
     # build argument parser to parse script args and collect their
     # values
@@ -350,11 +346,15 @@ def main(wf):
         return 0  # 0 means script exited cleanly
 
    # handle any device or scene commands there may be
-    handle_device_commands(api_key, args)
+    handle_device_commands(api_key, args, commands)
     handle_scene_commands(api_key, args)
 
+    # retrieve cached devices and scenes
+    devices = wf.stored_data('devices')
+    scenes = wf.stored_data('scenes')
+
     # since this i now sure to be a device/scene query, fix args if there is a device/scene command in there
-    args = extract_commands(args)
+    args = extract_commands(args, wf, devices, commands)
  
     # update query post extraction
     query = args.query
@@ -371,9 +371,6 @@ def main(wf):
             autocomplete='workflow:update',
             icon=ICON_INFO)
 
-    # retrieve cached devices and scenes
-    devices = wf.stored_data('devices')
-    scenes = wf.stored_data('scenes')
 
     if not devices or len(devices) < 1:
         wf.add_item('No Devices...',
@@ -387,7 +384,7 @@ def main(wf):
 
     # If script was passed a query, use it to filter posts
     if query:
-        devices = wf.filter(query, devices, key=search_key_for_device, min_score=20)
+        devices = wf.filter(query, devices, key=lambda x: search_key_for_device(x, commands), min_score=20)
         scenes = wf.filter(query, scenes, key=search_key_for_scene, min_score=20)
 
         if devices:
@@ -404,7 +401,7 @@ def main(wf):
             elif not args.device_command or args.device_command not in commands:
                 # Single device only, no command or not complete command yet so populate with all the commands
                 device = devices[0]
-                device_commands = get_device_commands(device)
+                device_commands = get_device_commands(device, commands)
                 device_commands = list(filter(lambda x: x.startswith(args.device_command), device_commands))
                 for command in device_commands:
                     wf.add_item(title=device['label'],
