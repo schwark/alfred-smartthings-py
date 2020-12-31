@@ -5,7 +5,7 @@ import re
 import argparse
 import json
 from workflow.workflow import MATCH_ATOM, MATCH_STARTSWITH, MATCH_SUBSTRING, MATCH_ALL, MATCH_INITIALS, MATCH_CAPITALS, MATCH_INITIALS_STARTSWITH, MATCH_INITIALS_CONTAIN
-from workflow import Workflow, ICON_WEB, ICON_WARNING, ICON_SWITCH, ICON_HOME, ICON_COLOR, ICON_INFO, ICON_SYNC, web, PasswordNotFound
+from workflow import Workflow, ICON_WEB, ICON_WARNING, ICON_BURN, ICON_SWITCH, ICON_HOME, ICON_COLOR, ICON_INFO, ICON_SYNC, web, PasswordNotFound
 
 log = None
 
@@ -126,37 +126,18 @@ def search_key_for_scene(scene):
     elements.append(scene['sceneName'])  # name of scene
     return u' '.join(elements)
 
-def handle_config(args):
-    if not args.query:
-        log.debug('handle_config: no query passed in')
-        return
-    words = args.query.split()
-    log.debug('handle_config: words = '+'/'.join(words))
-    if('apikey' == words[0] and len(words) > 1):
-        wf.add_item(title='Set API Key...',
-                    subtitle='Setting API Key to '+words[1],
-                    arg='--apikey "'+words[1]+'"',
-                    valid=True,
-                    icon=ICON_INFO)
-        wf.send_feedback()
-        return True
-    if('update' == words[0]):
-        wf.add_item(title='Update Devices and Scenes...',
-                    subtitle='Refresh Devices and Scenes',
-                    arg='--update',
-                    valid=True,
-                    icon=ICON_SYNC)
-        wf.send_feedback()
-        return True
-    if('reinit' == words[0]):
-        wf.add_item(title='Reinitialize the workflow...',
-                    subtitle='CAUTION: Forgets all API Keys, Devices and Scenes',
-                    arg='--reinit',
-                    valid=True,
-                    icon=ICON_WARNING)
-        wf.send_feedback()
-        return True
-    return False
+def add_config_commands(args, config_commands):
+    config_command_list = wf.filter(args.query, config_commands.keys(), min_score=80, match_on=MATCH_SUBSTRING | MATCH_STARTSWITH | MATCH_ATOM)
+    if config_command_list:
+        for cmd in config_command_list:
+            wf.add_item(config_commands[cmd]['title'],
+                        config_commands[cmd]['subtitle'],
+                        arg=config_commands[cmd]['args'],
+                        autocomplete=config_commands[cmd]['autocomplete'],
+                        icon=config_commands[cmd]['icon'],
+                        valid=config_commands[cmd]['valid'])
+
+    return config_command_list
 
 def get_device_commands(device, commands):
     result = []
@@ -273,6 +254,8 @@ def main(wf):
 
     log.debug("args are "+str(args))
 
+    words = args.query.split(' ') if args.query else []
+
 
     # list of commands
     commands = {
@@ -350,11 +333,40 @@ def main(wf):
         }
     }
 
-
-    # check to see if any config commands - non device/scene commands are needed
-    if(handle_config(args)):
-        # if command was  handled, exit cleanly  now
-        return 0
+    config_commands = {
+        'update': {
+            'title': 'Update Devices and Scenes',
+            'subtitle': 'Update the devices and scenes from SmartThings',
+            'autocomplete': 'update',
+            'args': ' --update',
+            'icon': ICON_SYNC,
+            'valid': True
+        },
+        'apikey': {
+            'title': 'Set API Key',
+            'subtitle': 'Set api key to personal access token from SmartThings',
+            'autocomplete': 'apikey',
+            'args': ' --apikey '+(words[1] if len(words)>1 else ''),
+            'icon': ICON_WEB,
+            'valid': len(words) > 1
+        },
+        'reinit': {
+            'title': 'Reinitialize the workflow',
+            'subtitle': 'CAUTION: this deletes all scenes, devices and apikeys...',
+            'autocomplete': 'reinit',
+            'args': ' --reinit',
+            'icon': ICON_BURN,
+            'valid': True
+        },
+        'workflow:update': {
+            'title': 'Update the workflow',
+            'subtitle': 'Updates workflow to latest github version',
+            'autocomplete': 'workflow:update',
+            'args': '',
+            'icon': ICON_SYNC,
+            'valid': True
+        }
+    }
 
     # Reinitialize if necessary
     if args.reinit:
@@ -405,11 +417,15 @@ def main(wf):
     handle_device_commands(api_key, args, commands)
     handle_scene_commands(api_key, args)
 
+    # add config commands to filter
+    add_config_commands(args, config_commands)
+
     # since this i now sure to be a device/scene query, fix args if there is a device/scene command in there
     args = extract_commands(args, wf, devices, commands)
  
     # update query post extraction
     query = args.query
+
 
     ####################################################################
     # View/filter devices or scenes
@@ -437,7 +453,7 @@ def main(wf):
     # If script was passed a query, use it to filter posts
     if query:
         devices = get_filtered_devices(query, devices, commands)
-        scenes = wf.filter(query, scenes, key=search_key_for_scene, min_score=20, match_on=MATCH_SUBSTRING | MATCH_STARTSWITH | MATCH_ATOM)
+        scenes = wf.filter(query, scenes, key=search_key_for_scene, min_score=80, match_on=MATCH_SUBSTRING | MATCH_STARTSWITH | MATCH_ATOM)
 
         if devices:
             if 1 == len(devices) and (not args.device_command or args.device_command not in commands):
