@@ -87,3 +87,8 @@ This should only be needed if you ever want to start again for whatever reason -
 st workflow:update
 ```
 An update notification should show up when an update is available, but if not invoking this should update the workflow to latest version on github
+
+## Acknowledgements
+
+Icons made by [Freepik][https://www.flaticon.com/authors/freepik] from [www.flaticon.com][https://www.flaticon.com]
+Icons also from [IconFinder][https://www.iconfinder.com/]
