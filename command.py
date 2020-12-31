@@ -178,8 +178,8 @@ def handle_device_commands(api_key, args, commands):
     result = st_api(api_key,'devices/'+args.device_uid+'/commands', None, 'POST', data)
     result = (result and result['results']  and len(result['results']) > 0 and result['results'][0]['status'] and 'ACCEPTED' == result['results'][0]['status'])
     if result:
-        qnotify("SmartThings", device_name+" turned "+args.device_command)
-    log.debug("Switch Command "+device_name+" "+args.device_command+" "+("succeeded" if result else "failed"))
+        qnotify("SmartThings", device_name+" turned "+args.device_command+' '+(args.device_params[0] if args.device_params else ''))
+    log.debug("Switch Command "+device_name+" "+args.device_command+" "+(args.device_params[0] if args.device_params else '')+' '+("succeeded" if result else "failed"))
     return result
 
 def handle_scene_commands(api_key, args):
@@ -201,7 +201,8 @@ def extract_commands(args, wf, devices, commands):
     full_devices = wf.filter(args.query, devices, key=lambda x: search_key_for_device(x, commands), min_score=20)
     minusone_devices = wf.filter(' '.join(words[0:-1]), devices, key=lambda x: search_key_for_device(x, commands), min_score=20)
     minustwo_devices = wf.filter(' '.join(words[0:-2]), devices, key=lambda x: search_key_for_device(x, commands), min_score=20)
-    if 1 == len(minusone_devices) and 0 == len(full_devices):
+
+    if 1 == len(minusone_devices) and (0 == len(full_devices) or (1 == len(full_devices) and full_devices[0]['deviceId'] == minusone_devices[0]['deviceId'])):
         extra_words = args.query.replace(minusone_devices[0]['label'],'').split()
         if extra_words:
             log.debug("extract_commands: setting command to "+extra_words[0])
@@ -289,12 +290,40 @@ def main(wf):
                         'hex': lambda: get_color(args.device_params[0], colors)
                     }
                 ]
+        },
+        'mode': {
+            'component': 'main',
+            'capability': 'thermostatMode',
+            'command': 'setThermostatMode',
+            'arguments': [
+                lambda: str(args.device_params[0])
+            ]
+        },
+        'heat': {
+                'component': 'main',
+                'capability': 'thermostatHeatingSetpoint',
+                'command': 'setHeatingSetpoint',
+                'arguments': [
+                    lambda: int(args.device_params[0]),
+                ]
+        },
+        'cool': {
+                'component': 'main',
+                'capability': 'thermostatCoolingSetpoint',
+                'command': 'setCoolingSetpoint',
+                'arguments': [
+                    lambda: int(args.device_params[0]),
+                ]
         }
     }
 
     command_params = {
         'color': {
-            'values': colors.keys() if colors else []
+            'values': colors.keys() if colors else [],
+            'regex': '[0-9a-f]{6}'
+        },
+        'mode': {
+            'values': ['auto','heat','cool','off']
         }
     }
 
@@ -393,6 +422,7 @@ def main(wf):
                 device = devices[0]
                 device_commands = get_device_commands(device, commands)
                 device_commands = list(filter(lambda x: x.startswith(args.device_command), device_commands))
+                log.debug('args.device_command is '+args.device_command)
                 for command in device_commands:
                     wf.add_item(title=device['label'],
                             subtitle='Turn '+device['label']+' '+command+' '+(' '.join(args.device_params) if args.device_params else ''),
@@ -407,12 +437,16 @@ def main(wf):
                 param_start = args.device_params[0] if args.device_params else ''
                 param_list = list(filter(lambda x: x.startswith(param_start), param_list))
                 param_list.sort()
+                check_regex = False
+                if not param_list and command_params[args.device_command]['regex']:
+                    param_list.append(args.device_params[0].lower())
+                    check_regex = True
                 for param in param_list:
                     wf.add_item(title=device['label'],
                             subtitle='Turn '+device['label']+' '+args.device_command+' '+param,
                             arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+param,
                             autocomplete=device['label']+' '+args.device_command,
-                            valid=True,
+                            valid=not check_regex or re.match(command_params[args.device_command]['regex'], param),
                             icon=ICON_SWITCH)
             else:
                 # Loop through the returned devices and add an item for each to
