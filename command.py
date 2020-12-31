@@ -23,6 +23,20 @@ def get_scene(scene_uid):
     scenes = wf.stored_data('scenes')
     return next((x for x in scenes if scene_uid == x['sceneId']), None)
 
+def get_device_icon(device):
+    capabilities = get_device_capabilities(device)
+    if 'thermostatMode' in capabilities:
+        icon = 'thermostat'
+    elif 'lock' in capabilities:
+        icon = 'lock'
+    elif 'colorControl' in capabilities:
+        icon = 'color-light'
+    elif 'switchLevel' in capabilities:
+        icon = 'light'
+    else:
+        icon = 'switch'
+    return 'icons/'+icon+'.png'
+
 def st_api(api_key, url, params=None, method='GET', data=None):
     url = 'https://api.smartthings.com/v1/'+url
     headers = {'Authorization':'Bearer '+api_key,'Accept':"application/json"}
@@ -429,7 +443,7 @@ def main(wf):
                             arg=' --device-uid '+device['deviceId']+' --device-command '+command+' --device-params '+(' '.join(args.device_params)),
                             autocomplete=device['label']+' '+command,
                             valid='arguments' not in commands[command] or args.device_params,
-                            icon=ICON_SWITCH)
+                            icon=get_device_icon(device))
             elif 1 == len(devices) and (args.device_command and args.device_command in commands and args.device_command in command_params):
                 # single device and has command already - populate with params?
                 device = devices[0]
@@ -447,7 +461,7 @@ def main(wf):
                             arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+param,
                             autocomplete=device['label']+' '+args.device_command,
                             valid=not check_regex or re.match(command_params[args.device_command]['regex'], param),
-                            icon=ICON_SWITCH)
+                            icon=get_device_icon(device))
             else:
                 # Loop through the returned devices and add an item for each to
                 # the list of results for Alfred
@@ -457,7 +471,7 @@ def main(wf):
                             arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+(' '.join(args.device_params)),
                             autocomplete=device['label'],
                             valid=args.device_command in commands,
-                            icon=ICON_SWITCH)
+                            icon=get_device_icon(device))
 
 
         # Loop through the returned scenes and add an item for each to
@@ -468,7 +482,7 @@ def main(wf):
                     arg=' --scene-uid '+scene['sceneId'],
                     autocomplete=scene['sceneName'],
                     valid=True,
-                    icon=ICON_COLOR)
+                    icon='icons/scene.png')
 
         # Send the results to Alfred as XML
         wf.send_feedback()
