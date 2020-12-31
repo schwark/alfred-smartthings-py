@@ -4,6 +4,7 @@ import sys
 import re
 import argparse
 import json
+from workflow.workflow import MATCH_ATOM, MATCH_STARTSWITH, MATCH_SUBSTRING, MATCH_ALL, MATCH_INITIALS, MATCH_CAPITALS, MATCH_INITIALS_STARTSWITH, MATCH_INITIALS_CONTAIN
 from workflow import Workflow, ICON_WEB, ICON_WARNING, ICON_SWITCH, ICON_HOME, ICON_COLOR, ICON_INFO, ICON_SYNC, web, PasswordNotFound
 
 log = None
@@ -209,26 +210,34 @@ def handle_scene_commands(api_key, args):
     log.debug("Scene Command "+scene_name+" "+("succeeded" if result else "failed"))
     return result
 
+def get_filtered_devices(query, devices, commands):
+    result = wf.filter(query, devices, key=lambda x: search_key_for_device(x, commands), min_score=80, match_on=MATCH_SUBSTRING | MATCH_STARTSWITH | MATCH_ATOM)
+    # check to see if the first one is an exact match - if yes, remove all the other results
+    if result and result[0]['label'].lower() == query.lower():
+        result = result[0:1]
+    return result
+
 
 def extract_commands(args, wf, devices, commands):
     words = args.query.split() if args.query else []
-    full_devices = wf.filter(args.query, devices, key=lambda x: search_key_for_device(x, commands), min_score=20)
-    minusone_devices = wf.filter(' '.join(words[0:-1]), devices, key=lambda x: search_key_for_device(x, commands), min_score=20)
-    minustwo_devices = wf.filter(' '.join(words[0:-2]), devices, key=lambda x: search_key_for_device(x, commands), min_score=20)
+    if devices:
+        full_devices = get_filtered_devices(args.query,  devices, commands)
+        minusone_devices = get_filtered_devices(' '.join(words[0:-1]),  devices, commands)
+        minustwo_devices = get_filtered_devices(' '.join(words[0:-2]),  devices, commands)
 
-    if 1 == len(minusone_devices) and (0 == len(full_devices) or (1 == len(full_devices) and full_devices[0]['deviceId'] == minusone_devices[0]['deviceId'])):
-        extra_words = args.query.replace(minusone_devices[0]['label'],'').split()
-        if extra_words:
-            log.debug("extract_commands: setting command to "+extra_words[0])
-            args.device_command = extra_words[0]
-            args.query = minusone_devices[0]['label']
-    if 1 == len(minustwo_devices) and 0 == len(full_devices) and 0 == len(minusone_devices):
-        extra_words = args.query.replace(minustwo_devices[0]['label'],'').split()
-        if extra_words:
-            args.device_command = extra_words[0]
-            args.query = minustwo_devices[0]['label']
-            args.device_params = extra_words[1:]
-    log.debug("extract_commands: "+str(args))
+        if 1 == len(minusone_devices) and (0 == len(full_devices) or (1 == len(full_devices) and full_devices[0]['deviceId'] == minusone_devices[0]['deviceId'])):
+            extra_words = args.query.replace(minusone_devices[0]['label'],'').split()
+            if extra_words:
+                log.debug("extract_commands: setting command to "+extra_words[0])
+                args.device_command = extra_words[0]
+                args.query = minusone_devices[0]['label']
+        if 1 == len(minustwo_devices) and 0 == len(full_devices) and 0 == len(minusone_devices):
+            extra_words = args.query.replace(minustwo_devices[0]['label'],'').split()
+            if extra_words:
+                args.device_command = extra_words[0]
+                args.query = minustwo_devices[0]['label']
+                args.device_params = extra_words[1:]
+        log.debug("extract_commands: "+str(args))
     return args
 
 def main(wf):
@@ -427,8 +436,8 @@ def main(wf):
 
     # If script was passed a query, use it to filter posts
     if query:
-        devices = wf.filter(query, devices, key=lambda x: search_key_for_device(x, commands), min_score=20)
-        scenes = wf.filter(query, scenes, key=search_key_for_scene, min_score=20)
+        devices = get_filtered_devices(query, devices, commands)
+        scenes = wf.filter(query, scenes, key=search_key_for_scene, min_score=20, match_on=MATCH_SUBSTRING | MATCH_STARTSWITH | MATCH_ATOM)
 
         if devices:
             if 1 == len(devices) and (not args.device_command or args.device_command not in commands):
