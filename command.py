@@ -48,7 +48,7 @@ def st_api(api_key, url, params=None, method='GET', data=None):
         headers['Content-type'] = "application/json"
         if data and isinstance(data, dict):
             data = json.dumps(data)
-        log.debug("posting with data "+data)
+        log.debug("posting with data "+(data if data else ''))
         r = web.post(url, params, data, headers)
 
     log.debug("st_api: url:"+url+", method: "+method+",  headers: "+str(headers)+", params: "+str(params)+", data: "+str(data))
