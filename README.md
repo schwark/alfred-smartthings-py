@@ -54,6 +54,19 @@ st <lock-name> lock|unlock
 ```
 Causes the lock to lock or unlock  - clicking lock name autocompletes switch name and waits for command. If both name and command are provided, executes command and notifies upon success
 
+## Thermostat Commands
+
+```
+st <thermostat-name> mode auto|heat|cool|off
+```
+```
+st <thermostat-name> heat <temp>
+```
+```
+st <thermostat-name> cool <temp>
+```
+Sets the thermostat mode, and heat setpoint and cool setpoints - clicking thermostat name autocompletes and waits for command. If both name and command and params are provided, executes command and notifies upon success
+
 ## Scene Commands
 
 ```
