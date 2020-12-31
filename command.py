@@ -213,7 +213,7 @@ def handle_scene_commands(api_key, args):
 def get_filtered_devices(query, devices, commands):
     result = wf.filter(query, devices, key=lambda x: search_key_for_device(x, commands), min_score=80, match_on=MATCH_SUBSTRING | MATCH_STARTSWITH | MATCH_ATOM)
     # check to see if the first one is an exact match - if yes, remove all the other results
-    if result and result[0]['label'].lower() == query.lower():
+    if result and query and 'label' in result[0] and result[0]['label'] and result[0]['label'].lower() == query.lower():
         result = result[0:1]
     return result
 
