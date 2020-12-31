@@ -2,6 +2,7 @@
 Alfred  Workflow for new SmartThings API in python for a smaller workflow - only supports switches and scenes at the moment
 ## Install
 
+* Download .workflow file from [Releases](https://github.com/schwark/alfred-smartthings-py/releases)
 * Can be installed from Packal at http://www.packal.org/workflow/smartthings-new-api-workflow
 * Can also be downloaded from github as a zip file, unzip the downloaded zip, cd into the zip directory, and create a new zip with all the files in that folder, and then renamed to Smartthings.alfredworkflow
 * Or you can use the workflow-build script in the folder, using
