@@ -127,7 +127,8 @@ def search_key_for_scene(scene):
     return u' '.join(elements)
 
 def add_config_commands(args, config_commands):
-    config_command_list = wf.filter(args.query, config_commands.keys(), min_score=80, match_on=MATCH_SUBSTRING | MATCH_STARTSWITH | MATCH_ATOM)
+	word = args.query.lower().split(' ')[0]
+    config_command_list = wf.filter(word, config_commands.keys(), min_score=80, match_on=MATCH_SUBSTRING | MATCH_STARTSWITH | MATCH_ATOM)
     if config_command_list:
         for cmd in config_command_list:
             wf.add_item(config_commands[cmd]['title'],
