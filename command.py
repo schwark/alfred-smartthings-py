@@ -24,20 +24,6 @@ def get_scene(scene_uid):
     scenes = wf.stored_data('scenes')
     return next((x for x in scenes if scene_uid == x['sceneId']), None)
 
-def get_device_icon(device):
-    capabilities = get_device_capabilities(device)
-    if 'thermostatMode' in capabilities:
-        icon = 'thermostat'
-    elif 'lock' in capabilities:
-        icon = 'lock'
-    elif 'colorControl' in capabilities:
-        icon = 'color-light'
-    elif 'switchLevel' in capabilities:
-        icon = 'light'
-    else:
-        icon = 'switch'
-    return 'icons/'+icon+'.png'
-
 def st_api(api_key, url, params=None, method='GET', data=None):
     url = 'https://api.smartthings.com/v1/'+url
     headers = {'Authorization':'Bearer '+api_key,'Accept':"application/json"}
@@ -110,35 +96,6 @@ def get_device_capabilities(device):
             capabilities = list(map( lambda x: x['id'], device['components'][0]['capabilities']))
     return capabilities
 
-def search_key_for_device(device, commands):
-    """Generate a string search key for a switch"""
-    elements = []
-    supported_capabilities = set(map(lambda x: x[1]['capability'], commands.items()))
-    #log.debug("supported capabilities are : "+str(supported_capabilities))
-    capabilities = get_device_capabilities(device)
-    if len(list(set(capabilities) & supported_capabilities)) > 0:
-        elements.append(device['label'])  # label of device
-    return u' '.join(elements)
-
-def search_key_for_scene(scene):
-    """Generate a string search key for a scene"""
-    elements = []
-    elements.append(scene['sceneName'])  # name of scene
-    return u' '.join(elements)
-
-def add_config_commands(args, config_commands):
-    word = args.query.lower().split(' ')[0] if args.query else ''
-    config_command_list = wf.filter(word, config_commands.keys(), min_score=80, match_on=MATCH_SUBSTRING | MATCH_STARTSWITH | MATCH_ATOM)
-    if config_command_list:
-        for cmd in config_command_list:
-            wf.add_item(config_commands[cmd]['title'],
-                        config_commands[cmd]['subtitle'],
-                        arg=config_commands[cmd]['args'],
-                        autocomplete=config_commands[cmd]['autocomplete'],
-                        icon=config_commands[cmd]['icon'],
-                        valid=config_commands[cmd]['valid'])
-    return config_command_list
-
 def get_device_commands(device, commands):
     result = []
     capabilities = get_device_capabilities(device)
@@ -190,36 +147,6 @@ def handle_scene_commands(api_key, args):
         qnotify("SmartThings", "Ran "+scene_name)
     log.debug("Scene Command "+scene_name+" "+("succeeded" if result else "failed"))
     return result
-
-def get_filtered_devices(query, devices, commands):
-    result = wf.filter(query, devices, key=lambda x: search_key_for_device(x, commands), min_score=80, match_on=MATCH_SUBSTRING | MATCH_STARTSWITH | MATCH_ATOM)
-    # check to see if the first one is an exact match - if yes, remove all the other results
-    if result and query and 'label' in result[0] and result[0]['label'] and result[0]['label'].lower() == query.lower():
-        result = result[0:1]
-    return result
-
-
-def extract_commands(args, wf, devices, commands):
-    words = args.query.split() if args.query else []
-    if devices:
-        full_devices = get_filtered_devices(args.query,  devices, commands)
-        minusone_devices = get_filtered_devices(' '.join(words[0:-1]),  devices, commands)
-        minustwo_devices = get_filtered_devices(' '.join(words[0:-2]),  devices, commands)
-
-        if 1 == len(minusone_devices) and (0 == len(full_devices) or (1 == len(full_devices) and full_devices[0]['deviceId'] == minusone_devices[0]['deviceId'])):
-            extra_words = args.query.replace(minusone_devices[0]['label'],'').split()
-            if extra_words:
-                log.debug("extract_commands: setting command to "+extra_words[0])
-                args.device_command = extra_words[0]
-                args.query = minusone_devices[0]['label']
-        if 1 == len(minustwo_devices) and 0 == len(full_devices) and 0 == len(minusone_devices):
-            extra_words = args.query.replace(minustwo_devices[0]['label'],'').split()
-            if extra_words:
-                args.device_command = extra_words[0]
-                args.query = minustwo_devices[0]['label']
-                args.device_params = extra_words[1:]
-        log.debug("extract_commands: "+str(args))
-    return args
 
 def main(wf):
     # retrieve cached devices and scenes
@@ -323,51 +250,6 @@ def main(wf):
         }
     }
 
-    command_params = {
-        'color': {
-            'values': colors.keys() if colors else [],
-            'regex': '[0-9a-f]{6}'
-        },
-        'mode': {
-            'values': ['auto','heat','cool','off']
-        }
-    }
-
-    config_commands = {
-        'update': {
-            'title': 'Update Devices and Scenes',
-            'subtitle': 'Update the devices and scenes from SmartThings',
-            'autocomplete': 'update',
-            'args': ' --update',
-            'icon': ICON_SYNC,
-            'valid': True
-        },
-        'apikey': {
-            'title': 'Set API Key',
-            'subtitle': 'Set api key to personal access token from SmartThings',
-            'autocomplete': 'apikey',
-            'args': ' --apikey '+(words[1] if len(words)>1 else ''),
-            'icon': ICON_WEB,
-            'valid': len(words) > 1
-        },
-        'reinit': {
-            'title': 'Reinitialize the workflow',
-            'subtitle': 'CAUTION: this deletes all scenes, devices and apikeys...',
-            'autocomplete': 'reinit',
-            'args': ' --reinit',
-            'icon': ICON_BURN,
-            'valid': True
-        },
-        'workflow:update': {
-            'title': 'Update the workflow',
-            'subtitle': 'Updates workflow to latest github version',
-            'autocomplete': 'workflow:update',
-            'args': '',
-            'icon': ICON_SYNC,
-            'valid': True
-        }
-    }
-
     # Reinitialize if necessary
     if args.reinit:
         wf.reset()
@@ -394,11 +276,7 @@ def main(wf):
     try:
         api_key = wf.get_password('smartthings_api_key')
     except PasswordNotFound:  # API key has not yet been set
-        wf.add_item('No API key set...',
-                    'Please use st apikey to set your SmartThings API key.',
-                    valid=False,
-                    icon=ICON_WARNING)
-        wf.send_feedback()
+        error('API Key not found')
         return 0
 
     # Update devices if that is passed in
@@ -416,102 +294,6 @@ def main(wf):
    # handle any device or scene commands there may be
     handle_device_commands(api_key, args, commands)
     handle_scene_commands(api_key, args)
-
-    # add config commands to filter
-    add_config_commands(args, config_commands)
-
-    # since this i now sure to be a device/scene query, fix args if there is a device/scene command in there
-    args = extract_commands(args, wf, devices, commands)
- 
-    # update query post extraction
-    query = args.query
-
-
-    ####################################################################
-    # View/filter devices or scenes
-    ####################################################################
-
-    # Check for an update and if available add an item to results
-    if wf.update_available:
-        # Add a notification to top of Script Filter results
-        wf.add_item('New version available',
-            'Action this item to install the update',
-            autocomplete='workflow:update',
-            icon=ICON_INFO)
-
-
-    if not devices or len(devices) < 1:
-        wf.add_item('No Devices...',
-                    'Please use st update - to update your SmartThings devices.',
-                    valid=False,
-                    icon=ICON_WARNING)
-        wf.send_feedback()
-        return 0
-    if not scenes:
-        scenes = dict()
-
-    # If script was passed a query, use it to filter posts
-    if query:
-        devices = get_filtered_devices(query, devices, commands)
-        scenes = wf.filter(query, scenes, key=search_key_for_scene, min_score=80, match_on=MATCH_SUBSTRING | MATCH_STARTSWITH | MATCH_ATOM)
-
-        if devices:
-            if 1 == len(devices) and (not args.device_command or args.device_command not in commands):
-                # Single device only, no command or not complete command yet so populate with all the commands
-                device = devices[0]
-                device_commands = get_device_commands(device, commands)
-                device_commands = list(filter(lambda x: x.startswith(args.device_command), device_commands))
-                log.debug('args.device_command is '+args.device_command)
-                for command in device_commands:
-                    wf.add_item(title=device['label'],
-                            subtitle='Turn '+device['label']+' '+command+' '+(' '.join(args.device_params) if args.device_params else ''),
-                            arg=' --device-uid '+device['deviceId']+' --device-command '+command+' --device-params '+(' '.join(args.device_params)),
-                            autocomplete=device['label']+' '+command,
-                            valid='arguments' not in commands[command] or args.device_params,
-                            icon=get_device_icon(device))
-            elif 1 == len(devices) and (args.device_command and args.device_command in commands and args.device_command in command_params):
-                # single device and has command already - populate with params?
-                device = devices[0]
-                param_list = command_params[args.device_command]['values']
-                param_start = args.device_params[0] if args.device_params else ''
-                param_list = list(filter(lambda x: x.startswith(param_start), param_list))
-                param_list.sort()
-                check_regex = False
-                if not param_list and command_params[args.device_command]['regex']:
-                    param_list.append(args.device_params[0].lower())
-                    check_regex = True
-                for param in param_list:
-                    wf.add_item(title=device['label'],
-                            subtitle='Turn '+device['label']+' '+args.device_command+' '+param,
-                            arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+param,
-                            autocomplete=device['label']+' '+args.device_command,
-                            valid=not check_regex or re.match(command_params[args.device_command]['regex'], param),
-                            icon=get_device_icon(device))
-            else:
-                # Loop through the returned devices and add an item for each to
-                # the list of results for Alfred
-                for device in devices:
-                    wf.add_item(title=device['label'],
-                            subtitle='Turn '+device['label']+' '+args.device_command+' '+(' '.join(args.device_params) if args.device_params else ''),
-                            arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+(' '.join(args.device_params)),
-                            autocomplete=device['label'],
-                            valid=args.device_command in commands,
-                            icon=get_device_icon(device))
-
-
-        # Loop through the returned scenes and add an item for each to
-        # the list of results for Alfred
-        for scene in scenes:
-            wf.add_item(title=scene['sceneName'],
-                    subtitle='Run '+scene['sceneName'],
-                    arg=' --scene-uid '+scene['sceneId'],
-                    autocomplete=scene['sceneName'],
-                    valid=True,
-                    icon='icons/scene.png')
-
-        # Send the results to Alfred as XML
-        wf.send_feedback()
-    return 0
 
 
 if __name__ == u"__main__":
