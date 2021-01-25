@@ -3,52 +3,13 @@
 import sys
 import re
 import argparse
-import json
 from workflow.workflow import MATCH_ATOM, MATCH_STARTSWITH, MATCH_SUBSTRING, MATCH_ALL, MATCH_INITIALS, MATCH_CAPITALS, MATCH_INITIALS_STARTSWITH, MATCH_INITIALS_CONTAIN
 from workflow import Workflow, ICON_WEB, ICON_WARNING, ICON_BURN, ICON_SWITCH, ICON_HOME, ICON_COLOR, ICON_INFO, ICON_SYNC, web, PasswordNotFound
+from common import qnotify, error, st_api, get_device, get_scene, commands
 
 log = None
 
-def qnotify(title, text):
-    print(text)
-
-def error(text):
-    print(text)
-    exit(0)
-
-def get_device(device_uid):
-    devices = wf.stored_data('devices')
-    return next((x for x in devices if device_uid == x['deviceId']), None)
-
-def get_scene(scene_uid):
-    scenes = wf.stored_data('scenes')
-    return next((x for x in scenes if scene_uid == x['sceneId']), None)
-
-def st_api(api_key, url, params=None, method='GET', data=None):
-    url = 'https://api.smartthings.com/v1/'+url
-    headers = {'Authorization':'Bearer '+api_key,'Accept':"application/json"}
-    r = None
-
-    if('GET' == method):
-        r = web.get(url, params, headers)
-    else:
-        headers['Content-type'] = "application/json"
-        if data and isinstance(data, dict):
-            data = json.dumps(data)
-        log.debug("posting with data "+(data if data else ''))
-        r = web.post(url, params, data, headers)
-
-    log.debug("st_api: url:"+url+", method: "+method+",  headers: "+str(headers)+", params: "+str(params)+", data: "+str(data))
-    # throw an error if request failed
-    # Workflow will catch this and show it to the user
-    r.raise_for_status()
-
-    # Parse the JSON returned by pinboard and extract the posts
-    result = r.json()
-    #log.debug(str(result))
-    return result    
-
-def get_devices(api_key):
+def get_devices(wf, api_key):
     """Retrieve all devices
 
     Returns a has of devices.
@@ -57,7 +18,7 @@ def get_devices(api_key):
     items = []
     i = 0
     while True:
-        result = st_api(api_key, 'devices', dict(max=200, page=i))
+        result = st_api(wf, api_key, 'devices', dict(max=200, page=i))
         if 'items' in result:
             items.extend(result['items'])
         if '_links' in result and 'next' in result['_links']:
@@ -67,13 +28,13 @@ def get_devices(api_key):
 
     return items
 
-def get_scenes(api_key):
+def get_scenes(wf, api_key):
     """Retrieve all scenes
 
     Returns a has of scenes.
 
     """
-    return st_api(api_key, 'scenes', dict(max=200))['items']
+    return st_api(wf, api_key, 'scenes', dict(max=200))['items']
 
 def get_colors():
     r = web.get('https://raw.githubusercontent.com/jonathantneal/color-names/master/color-names.json')
@@ -105,12 +66,12 @@ def get_device_commands(device, commands):
                 result.append(command) 
     return result
 
-def handle_device_commands(api_key, args, commands):
+def handle_device_commands(wf, api_key, args, commands):
     if not args.device_uid or args.device_command not in commands.keys():
         return 
     command = commands[args.device_command]
 
-    device = get_device(args.device_uid)
+    device = get_device(wf, args.device_uid)
     device_name = device['label']
     capabilities = get_device_capabilities(device)
     if command['capability'] not in capabilities:
@@ -128,20 +89,20 @@ def handle_device_commands(api_key, args, commands):
 
     data = {'commands': [command]}
     log.debug("Executing Switch Command: "+device_name+" "+args.device_command)
-    result = st_api(api_key,'devices/'+args.device_uid+'/commands', None, 'POST', data)
+    result = st_api(wf, api_key,'devices/'+args.device_uid+'/commands', None, 'POST', data)
     result = (result and result['results']  and len(result['results']) > 0 and result['results'][0]['status'] and 'ACCEPTED' == result['results'][0]['status'])
     if result:
         qnotify("SmartThings", device_name+" turned "+args.device_command+' '+(args.device_params[0] if args.device_params else ''))
     log.debug("Switch Command "+device_name+" "+args.device_command+" "+(args.device_params[0] if args.device_params else '')+' '+("succeeded" if result else "failed"))
     return result
 
-def handle_scene_commands(api_key, args):
+def handle_scene_commands(wf, api_key, args):
     if not args.scene_uid:
         return 
-    scene = get_scene(args.scene_uid)
+    scene = get_scene(wf, args.scene_uid)
     scene_name = scene['sceneName']
     log.debug("Executing Scene Command: "+scene_name)
-    result = st_api(api_key,'scenes/'+args.scene_uid+'/execute', None, 'POST')
+    result = st_api(wf, api_key,'scenes/'+args.scene_uid+'/execute', None, 'POST')
     result = (result and result['status'] and 'success' == result['status'])
     if result:
         qnotify("SmartThings", "Ran "+scene_name)
@@ -184,72 +145,6 @@ def main(wf):
     words = args.query.split(' ') if args.query else []
 
 
-    # list of commands
-    commands = {
-        'on': {
-                'component': 'main',
-                'capability': 'switch',
-                'command': 'on'
-        }, 
-        'off': {
-                'component': 'main',
-                'capability': 'switch',
-                'command': 'off'
-        },
-        'dim': {
-                'component': 'main',
-                'capability': 'switchLevel',
-                'command': 'setLevel',
-                'arguments': [
-                    lambda: int(args.device_params[0]),
-                ]
-        },
-        'lock': {
-                'component': 'main',
-                'capability': 'lock',
-                'command': 'lock'
-        }, 
-        'unlock': {
-                'component': 'main',
-                'capability': 'lock',
-                'command': 'unlock'
-        },
-        'color': {
-                'component': 'main',
-                'capability': 'colorControl',
-                'command': 'setColor',
-                'arguments': [
-                    {
-                        'hex': lambda: get_color(args.device_params[0], colors)
-                    }
-                ]
-        },
-        'mode': {
-            'component': 'main',
-            'capability': 'thermostatMode',
-            'command': 'setThermostatMode',
-            'arguments': [
-                lambda: str(args.device_params[0])
-            ]
-        },
-        'heat': {
-                'component': 'main',
-                'capability': 'thermostatHeatingSetpoint',
-                'command': 'setHeatingSetpoint',
-                'arguments': [
-                    lambda: int(args.device_params[0]),
-                ]
-        },
-        'cool': {
-                'component': 'main',
-                'capability': 'thermostatCoolingSetpoint',
-                'command': 'setCoolingSetpoint',
-                'arguments': [
-                    lambda: int(args.device_params[0]),
-                ]
-        }
-    }
-
     # Reinitialize if necessary
     if args.reinit:
         wf.reset()
@@ -282,8 +177,8 @@ def main(wf):
     # Update devices if that is passed in
     if args.update:  
         # update devices and scenes
-        devices = get_devices(api_key)
-        scenes = get_scenes(api_key)
+        devices = get_devices(wf, api_key)
+        scenes = get_scenes(wf, api_key)
         colors = get_colors()
         wf.store_data('devices', devices)
         wf.store_data('scenes', scenes)
@@ -292,8 +187,8 @@ def main(wf):
         return 0  # 0 means script exited cleanly
 
    # handle any device or scene commands there may be
-    handle_device_commands(api_key, args, commands)
-    handle_scene_commands(api_key, args)
+    handle_device_commands(wf, api_key, args, commands)
+    handle_scene_commands(wf, api_key, args)
 
 
 if __name__ == u"__main__":

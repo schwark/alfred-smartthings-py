@@ -5,17 +5,9 @@ import re
 import argparse
 from workflow.workflow import MATCH_ATOM, MATCH_STARTSWITH, MATCH_SUBSTRING, MATCH_ALL, MATCH_INITIALS, MATCH_CAPITALS, MATCH_INITIALS_STARTSWITH, MATCH_INITIALS_CONTAIN
 from workflow import Workflow, ICON_WEB, ICON_WARNING, ICON_BURN, ICON_SWITCH, ICON_HOME, ICON_COLOR, ICON_INFO, ICON_SYNC, web, PasswordNotFound
+from common import st_api, commands
 
 log = None
-
-
-def get_device(device_uid):
-    devices = wf.stored_data('devices')
-    return next((x for x in devices if device_uid == x['deviceId']), None)
-
-def get_scene(scene_uid):
-    scenes = wf.stored_data('scenes')
-    return next((x for x in scenes if scene_uid == x['sceneId']), None)
 
 def get_device_icon(device):
     capabilities = get_device_capabilities(device)
@@ -78,27 +70,28 @@ def add_config_commands(args, config_commands):
 def get_device_commands(device, commands):
     result = []
     capabilities = get_device_capabilities(device)
+    capabilities.append('global')
     for capability in capabilities:
         for command, map in commands.items():
             if capability == map['capability']:
                 result.append(command) 
     return result
 
-def get_filtered_devices(query, devices, commands):
+def get_filtered_devices(wf, query, devices, commands):
     result = wf.filter(query, devices, key=lambda x: search_key_for_device(x, commands), min_score=80, match_on=MATCH_SUBSTRING | MATCH_STARTSWITH | MATCH_ATOM)
     # check to see if the first one is an exact match - if yes, remove all the other results
     if result and query and 'label' in result[0] and result[0]['label'] and result[0]['label'].lower() == query.lower():
         result = result[0:1]
     return result
 
-def extract_commands(args, wf, devices, commands):
+def extract_commands(wf, args, devices, commands):
     words = args.query.split() if args.query else []
     args.device_command = ''
     args.device_params = []
     if devices:
-        full_devices = get_filtered_devices(args.query,  devices, commands)
-        minusone_devices = get_filtered_devices(' '.join(words[0:-1]),  devices, commands)
-        minustwo_devices = get_filtered_devices(' '.join(words[0:-2]),  devices, commands)
+        full_devices = get_filtered_devices(wf, args.query,  devices, commands)
+        minusone_devices = get_filtered_devices(wf, ' '.join(words[0:-1]),  devices, commands)
+        minustwo_devices = get_filtered_devices(wf, ' '.join(words[0:-2]),  devices, commands)
 
         if 1 == len(minusone_devices) and (0 == len(full_devices) or (1 == len(full_devices) and full_devices[0]['deviceId'] == minusone_devices[0]['deviceId'])):
             extra_words = args.query.replace(minusone_devices[0]['label'],'').split()
@@ -114,6 +107,67 @@ def extract_commands(args, wf, devices, commands):
                 args.device_params = extra_words[1:]
         log.debug("extract_commands: "+str(args))
     return args
+
+def device_status(wf, api_key, device):
+    caps = {
+        'switch': {
+            'tag': 'switch',
+            'icon': u'🎚'
+        },
+        'switchLevel': {
+            'tag': 'level',
+            'icon': u'💡'
+        },
+        'lock': {
+            'tag': 'lock',
+            'icon': u'🔒'
+        },
+        'battery': {
+            'tag': 'battery',
+            'icon': u'🔋'
+        },
+        'thermostat': [
+        {
+            'tag': 'heatingSetpoint',
+            'icon': u'🔥'
+        },
+        {
+            'tag': 'coolingSetpoint',
+            'icon': u'❄️'
+        },
+        {
+            'tag': 'thermostatOperatingState',
+            'icon': u'🏃🏻‍♀️'
+        },
+        {
+            'tag': 'temperature',
+            'icon': u'🌡'
+        },
+        {
+            'tag': 'thermostatFanMode',
+            'icon': u'💨'
+        },
+        {
+            'tag': 'thermostatMode',
+            'icon': u'😰'
+        }
+        ]
+    }
+    subtitle = ''
+    status = st_api(wf, api_key, '/devices/'+device['deviceId']+'/status')
+    if status and 'components' in status and 'main' in status['components']:
+        detail = status['components']['main']
+        for cap in caps:
+            if not cap in detail: continue
+            metas = caps[cap]
+            if not isinstance(metas, list):
+                metas = [metas]
+            for meta in metas:
+                tag = meta['tag']
+                if not tag in detail[cap]: continue
+                log.debug(device['label']+' '+cap+' '+tag)
+                subtitle += u'  '+meta['icon']+' '+str(detail[cap][tag]['value'])+(detail[cap][tag]['unit'] if 'unit' in detail[cap][tag] else '')
+    return subtitle
 
 def main(wf):
     # retrieve cached devices and scenes
@@ -132,73 +186,6 @@ def main(wf):
     log.debug("args are "+str(args))
 
     words = args.query.split(' ') if args.query else []
-
-
-    # list of commands
-    commands = {
-        'on': {
-                'component': 'main',
-                'capability': 'switch',
-                'command': 'on'
-        }, 
-        'off': {
-                'component': 'main',
-                'capability': 'switch',
-                'command': 'off'
-        },
-        'dim': {
-                'component': 'main',
-                'capability': 'switchLevel',
-                'command': 'setLevel',
-                'arguments': [
-                    lambda: int(args.device_params[0]),
-                ]
-        },
-        'lock': {
-                'component': 'main',
-                'capability': 'lock',
-                'command': 'lock'
-        }, 
-        'unlock': {
-                'component': 'main',
-                'capability': 'lock',
-                'command': 'unlock'
-        },
-        'color': {
-                'component': 'main',
-                'capability': 'colorControl',
-                'command': 'setColor',
-                'arguments': [
-                    {
-                        'hex': lambda: get_color(args.device_params[0], colors)
-                    }
-                ]
-        },
-        'mode': {
-            'component': 'main',
-            'capability': 'thermostatMode',
-            'command': 'setThermostatMode',
-            'arguments': [
-                lambda: str(args.device_params[0])
-            ]
-        },
-        'heat': {
-                'component': 'main',
-                'capability': 'thermostatHeatingSetpoint',
-                'command': 'setHeatingSetpoint',
-                'arguments': [
-                    lambda: int(args.device_params[0]),
-                ]
-        },
-        'cool': {
-                'component': 'main',
-                'capability': 'thermostatCoolingSetpoint',
-                'command': 'setCoolingSetpoint',
-                'arguments': [
-                    lambda: int(args.device_params[0]),
-                ]
-        }
-    }
 
     command_params = {
         'color': {
@@ -263,7 +250,7 @@ def main(wf):
         return 0
 
     # since this i now sure to be a device/scene query, fix args if there is a device/scene command in there
-    args = extract_commands(args, wf, devices, commands)
+    args = extract_commands(wf, args, devices, commands)
  
     # update query post extraction
     query = args.query
@@ -294,7 +281,7 @@ def main(wf):
 
     # If script was passed a query, use it to filter posts
     if query:
-        devices = get_filtered_devices(query, devices, commands)
+        devices = get_filtered_devices(wf, query, devices, commands)
         scenes = wf.filter(query, scenes, key=search_key_for_scene, min_score=80, match_on=MATCH_SUBSTRING | MATCH_STARTSWITH | MATCH_ATOM)
 
         if devices:
@@ -309,7 +296,7 @@ def main(wf):
                             subtitle='Turn '+device['label']+' '+command+' '+(' '.join(args.device_params) if args.device_params else ''),
                             arg=' --device-uid '+device['deviceId']+' --device-command '+command+' --device-params '+(' '.join(args.device_params)),
                             autocomplete=device['label']+' '+command,
-                            valid='arguments' not in commands[command] or args.device_params,
+                            valid='status' != command and ('arguments' not in commands[command] or args.device_params),
                             icon=get_device_icon(device))
             elif 1 == len(devices) and (args.device_command and args.device_command in commands and args.device_command in command_params):
                 # single device and has command already - populate with params?
@@ -329,6 +316,14 @@ def main(wf):
                             autocomplete=device['label']+' '+args.device_command,
                             valid=not check_regex or re.match(command_params[args.device_command]['regex'], param),
                             icon=get_device_icon(device))
+            elif 1 == len(devices) and ('status' == args.device_command):
+                device = devices[0]
+                wf.add_item(title=device['label'],
+                        subtitle=device_status(wf, api_key, device),
+                        arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command,
+                        autocomplete=device['label']+' '+args.device_command,
+                        valid=False,
+                        icon=get_device_icon(device))
             else:
                 # Loop through the returned devices and add an item for each to
                 # the list of results for Alfred

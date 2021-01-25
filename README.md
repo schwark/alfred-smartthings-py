@@ -26,6 +26,15 @@ st update
 ```
 This should be needed once at the install, and everytime you add or delete new devices and/or scenes
 
+
+## Global Device Commands
+
+```
+st <device-name> status
+```
+Queries the hub and provides key status elements for the device - can take a couple of seconds to populate due to live query. Non-actionable, for read only information
+
+
 ## Switch Commands
 
 ```
