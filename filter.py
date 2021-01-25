@@ -126,6 +126,11 @@ def device_status(wf, api_key, device):
             'tag': 'battery',
             'icon': u'🔋'
         },
+        'colorControl': {
+            'tag': 'color',
+            'icon': u'🎨'
+
+        },
         'thermostat': [
         {
             'tag': 'heatingSetpoint',
