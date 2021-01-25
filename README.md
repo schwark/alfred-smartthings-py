@@ -26,6 +26,13 @@ st update
 ```
 This should be needed once at the install, and everytime you add or delete new devices and/or scenes
 
+## Show Status Control
+
+```
+st showstatus <on|off>
+```
+This setting controls whether or not the first line item of a single device search is the status of the device. Since querying the status adds latency, setting this to on takes a little longer for the command list for that device to populate. When this setting is off, a command called 'status' is added to the command list for the device that lets you query the status of the device on-demand. This 'off' setting is recommended for lower latency, but turning it on gives you status of the device simply by searching for the device
+
 
 ## Global Device Commands
 
