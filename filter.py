@@ -67,10 +67,11 @@ def add_config_commands(args, config_commands):
                         valid=config_commands[cmd]['valid'])
     return config_command_list
 
-def get_device_commands(device, commands):
+def get_device_commands(wf, device, commands):
     result = []
     capabilities = get_device_capabilities(device)
-    capabilities.append('global')
+    if not should_show_status(wf):
+        capabilities.append('global')
     for capability in capabilities:
         for command, map in commands.items():
             if capability == map['capability']:
@@ -174,6 +175,9 @@ def device_status(wf, api_key, device):
                 subtitle += u'  '+meta['icon']+' '+str(detail[cap][tag]['value'])+(detail[cap][tag]['unit'] if 'unit' in detail[cap][tag] else '')
     return subtitle
 
+def should_show_status(wf):
+    return ('on' == wf.settings['showstatus']) if 'showstatus' in wf.settings else False
+
 def main(wf):
     # retrieve cached devices and scenes
     devices = wf.stored_data('devices')
@@ -218,6 +222,14 @@ def main(wf):
             'args': ' --apikey '+(words[1] if len(words)>1 else ''),
             'icon': ICON_WEB,
             'valid': len(words) > 1
+        },
+        'showstatus': {
+            'title': 'Turn on/off showing of status when single device',
+            'subtitle': 'Adds latency. When off, can still get info via status command',
+            'autocomplete': 'showstatus',
+            'args': ' --showstatus '+(words[1] if len(words)>1 else ''),
+            'icon': ICON_INFO,
+            'valid': len(words) > 1 and words[1] in ['on', 'off']
         },
         'reinit': {
             'title': 'Reinitialize the workflow',
@@ -290,10 +302,18 @@ def main(wf):
         scenes = wf.filter(query, scenes, key=search_key_for_scene, min_score=80, match_on=MATCH_SUBSTRING | MATCH_STARTSWITH | MATCH_ATOM)
 
         if devices:
+            if 1 == len(devices) and should_show_status(wf):
+                device = devices[0]
+                wf.add_item(title=device['label'],
+                        subtitle=device_status(wf, api_key, device),
+                        arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command,
+                        autocomplete=device['label']+' '+args.device_command,
+                        valid=False,
+                        icon=get_device_icon(device))
             if 1 == len(devices) and (not args.device_command or args.device_command not in commands):
                 # Single device only, no command or not complete command yet so populate with all the commands
                 device = devices[0]
-                device_commands = get_device_commands(device, commands)
+                device_commands = get_device_commands(wf, device, commands)
                 device_commands = list(filter(lambda x: x.startswith(args.device_command), device_commands))
                 log.debug('args.device_command is '+args.device_command)
                 for command in device_commands:

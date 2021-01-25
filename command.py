@@ -122,6 +122,7 @@ def main(wf):
     # value to 'apikey' (dest). This will be called from a separate "Run Script"
     # action with the API key
     parser.add_argument('--apikey', dest='apikey', nargs='?', default=None)
+    parser.add_argument('--showstatus', dest='showstatus', nargs='?', default=None)
     # add an optional (nargs='?') --update argument and save its
     # value to 'apikey' (dest). This will be called from a separate "Run Script"
     # action with the API key
@@ -150,6 +151,13 @@ def main(wf):
         wf.reset()
         wf.delete_password('smartthings_api_key')
         qnotify('SmartThings', 'Workflow reinitialized')
+        return 0
+
+    if args.showstatus:
+        if args.showstatus in ['on', 'off']:
+            wf.settings['showstatus'] = args.showstatus
+            wf.settings.save()
+            qnotify('SmartThings', 'Show Status '+args.showstatus)
         return 0
 
     ####################################################################
