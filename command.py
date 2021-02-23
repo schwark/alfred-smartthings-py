@@ -145,6 +145,74 @@ def main(wf):
 
     words = args.query.split(' ') if args.query else []
 
+    # list of commands
+    commands = {
+        'status': {
+            'capability': 'global'
+        },
+        'on': {
+                'component': 'main',
+                'capability': 'switch',
+                'command': 'on'
+        }, 
+        'off': {
+                'component': 'main',
+                'capability': 'switch',
+                'command': 'off'
+        },
+        'dim': {
+                'component': 'main',
+                'capability': 'switchLevel',
+                'command': 'setLevel',
+                'arguments': [
+                    lambda: int(args.device_params[0]),
+                ]
+        },
+        'lock': {
+                'component': 'main',
+                'capability': 'lock',
+                'command': 'lock'
+        }, 
+        'unlock': {
+                'component': 'main',
+                'capability': 'lock',
+                'command': 'unlock'
+        },
+        'color': {
+                'component': 'main',
+                'capability': 'colorControl',
+                'command': 'setColor',
+                'arguments': [
+                    {
+                        'hex': lambda: get_color(args.device_params[0], colors)
+                    }
+                ]
+        },
+        'mode': {
+            'component': 'main',
+            'capability': 'thermostatMode',
+            'command': 'setThermostatMode',
+            'arguments': [
+                lambda: str(args.device_params[0])
+            ]
+        },
+        'heat': {
+                'component': 'main',
+                'capability': 'thermostatHeatingSetpoint',
+                'command': 'setHeatingSetpoint',
+                'arguments': [
+                    lambda: int(args.device_params[0]),
+                ]
+        },
+        'cool': {
+                'component': 'main',
+                'capability': 'thermostatCoolingSetpoint',
+                'command': 'setCoolingSetpoint',
+                'arguments': [
+                    lambda: int(args.device_params[0]),
+                ]
+        }
+    }
 
     # Reinitialize if necessary
     if args.reinit:
