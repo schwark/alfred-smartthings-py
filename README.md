@@ -45,7 +45,7 @@ Queries the hub and provides key status elements for the device - can take a cou
 ## Switch Commands
 
 ```
-st <switch-name> on|off
+st <switch-name> on|off|toggle
 ```
 Turns the Switch on or off - clicking switch name autocompletes switch name and waits for command. If both name and command are provided, executes command and notifies upon success
 
