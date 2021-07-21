@@ -66,9 +66,22 @@ def get_device_commands(device, commands):
                 result.append(command) 
     return result
 
+def preprocess_device_command(wf, api_key, args, commands):
+    if 'toggle' == args.device_command:
+        status = st_api(wf, api_key, '/devices/'+args.device_uid+'/status')
+        if status and 'components' in status and 'main' in status['components'] and 'switch' in status['components']['main'] and 'switch' in status['components']['main']['switch'] and 'value' in status['components']['main']['switch']['switch']:
+            state = status['components']['main']['switch']['switch']['value']
+            log.debug("Toggle Switch state is "+state)
+            if 'on' == state:
+                args.device_command = 'off'
+            else:
+                args.device_command = 'on'
+    return args.device_command
+
 def handle_device_commands(wf, api_key, args, commands):
     if not args.device_uid or args.device_command not in commands.keys():
         return 
+    args.device_command = preprocess_device_command(wf, api_key, args, commands)
     command = commands[args.device_command]
 
     device = get_device(wf, args.device_uid)
@@ -86,6 +99,7 @@ def handle_device_commands(wf, api_key, args, commands):
                 for key, value in arg.items():
                     if callable(value):
                         arg[key] = value()                
+
 
     data = {'commands': [command]}
     log.debug("Executing Switch Command: "+device_name+" "+args.device_command)
@@ -151,6 +165,11 @@ def main(wf):
             'capability': 'global'
         },
         'on': {
+                'component': 'main',
+                'capability': 'switch',
+                'command': 'on'
+        }, 
+        'toggle': {
                 'component': 'main',
                 'capability': 'switch',
                 'command': 'on'

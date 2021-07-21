@@ -211,6 +211,11 @@ def main(wf):
                 'capability': 'switch',
                 'command': 'off'
         },
+        'toggle': {
+                'component': 'main',
+                'capability': 'switch',
+                'command': 'off'
+        },
         'dim': {
                 'component': 'main',
                 'capability': 'switchLevel',
