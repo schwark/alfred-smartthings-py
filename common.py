@@ -41,4 +41,11 @@ def st_api(wf, api_key, url, params=None, method='GET', data=None):
     #log.debug(str(result))
     return result    
 
+def get_stored_data(wf, name):
+    data = {}
+    try:
+        data = wf.stored_data(name)
+    except ValueError:
+        pass
+    return data
 

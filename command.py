@@ -4,8 +4,8 @@ import sys
 import re
 import argparse
 from workflow.workflow import MATCH_ATOM, MATCH_STARTSWITH, MATCH_SUBSTRING, MATCH_ALL, MATCH_INITIALS, MATCH_CAPITALS, MATCH_INITIALS_STARTSWITH, MATCH_INITIALS_CONTAIN
-from workflow import Workflow, ICON_WEB, ICON_WARNING, ICON_BURN, ICON_SWITCH, ICON_HOME, ICON_COLOR, ICON_INFO, ICON_SYNC, web, PasswordNotFound
-from common import qnotify, error, st_api, get_device, get_scene
+from workflow import Workflow, ICON_WEB, ICON_NOTE, ICON_BURN, ICON_SWITCH, ICON_HOME, ICON_COLOR, ICON_INFO, ICON_SYNC, web, PasswordNotFound
+from common import qnotify, error, st_api, get_device, get_scene, get_stored_data
 
 log = None
 
@@ -125,9 +125,9 @@ def handle_scene_commands(wf, api_key, args):
 
 def main(wf):
     # retrieve cached devices and scenes
-    devices = wf.stored_data('devices')
-    scenes = wf.stored_data('scenes')
-    colors = wf.stored_data('colors')
+    devices = get_stored_data(wf ,'devices')
+    scenes = get_stored_data(wf, 'scenes')
+    colors = get_stored_data(wf, 'colors')
 
     # build argument parser to parse script args and collect their
     # values

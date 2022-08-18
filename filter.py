@@ -4,8 +4,8 @@ import sys
 import re
 import argparse
 from workflow.workflow import MATCH_ATOM, MATCH_STARTSWITH, MATCH_SUBSTRING, MATCH_ALL, MATCH_INITIALS, MATCH_CAPITALS, MATCH_INITIALS_STARTSWITH, MATCH_INITIALS_CONTAIN
-from workflow import Workflow, ICON_WEB, ICON_WARNING, ICON_BURN, ICON_SWITCH, ICON_HOME, ICON_COLOR, ICON_INFO, ICON_SYNC, web, PasswordNotFound
-from common import st_api
+from workflow import Workflow, ICON_WEB, ICON_NOTE, ICON_BURN, ICON_SWITCH, ICON_HOME, ICON_COLOR, ICON_INFO, ICON_SYNC, web, PasswordNotFound
+from common import st_api, get_stored_data
 
 log = None
 
@@ -180,9 +180,9 @@ def should_show_status(wf):
 
 def main(wf):
     # retrieve cached devices and scenes
-    devices = wf.stored_data('devices')
-    scenes = wf.stored_data('scenes')
-    colors = wf.stored_data('colors')
+    devices = get_stored_data(wf, 'devices')
+    scenes = get_stored_data(wf, 'scenes')
+    colors = get_stored_data(wf, 'colors')
 
     # build argument parser to parse script args and collect their
     # values
@@ -336,7 +336,7 @@ def main(wf):
         wf.add_item('No API key set...',
                     'Please use st apikey to set your SmartThings API key.',
                     valid=False,
-                    icon=ICON_WARNING)
+                    icon=ICON_NOTE)
         wf.send_feedback()
         return 0
 
@@ -364,7 +364,7 @@ def main(wf):
         wf.add_item('No Devices...',
                     'Please use st update - to update your SmartThings devices.',
                     valid=False,
-                    icon=ICON_WARNING)
+                    icon=ICON_NOTE)
         wf.send_feedback()
         return 0
     if not scenes:
