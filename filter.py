@@ -395,7 +395,7 @@ def main(wf):
                             subtitle='Turn '+device['label']+' '+command+' '+(' '.join(args.device_params) if args.device_params else ''),
                             arg=' --device-uid '+device['deviceId']+' --device-command '+command+' --device-params '+(' '.join(args.device_params)),
                             autocomplete=device['label']+' '+command,
-                            valid='status' != command and ('arguments' not in commands[command] or args.device_params),
+                            valid=bool('status' != command and ('arguments' not in commands[command] or args.device_params)),
                             icon=get_device_icon(device))
             elif 1 == len(devices) and (args.device_command and args.device_command in commands and args.device_command in command_params):
                 # single device and has command already - populate with params?
@@ -413,7 +413,7 @@ def main(wf):
                             subtitle='Turn '+device['label']+' '+args.device_command+' '+param,
                             arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+param,
                             autocomplete=device['label']+' '+args.device_command,
-                            valid=not check_regex or re.match(command_params[args.device_command]['regex'], param),
+                            valid=bool(not check_regex or re.match(command_params[args.device_command]['regex'], param)),
                             icon=get_device_icon(device))
             elif 1 == len(devices) and ('status' == args.device_command):
                 device = devices[0]
@@ -431,7 +431,7 @@ def main(wf):
                             subtitle='Turn '+device['label']+' '+args.device_command+' '+(' '.join(args.device_params) if args.device_params else ''),
                             arg=' --device-uid '+device['deviceId']+' --device-command '+args.device_command+' --device-params '+(' '.join(args.device_params)),
                             autocomplete=device['label'],
-                            valid=args.device_command in commands,
+                            valid=bool(args.device_command in commands),
                             icon=get_device_icon(device))
 
 
