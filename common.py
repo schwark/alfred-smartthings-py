@@ -29,7 +29,7 @@ def st_api(wf, api_key, url, params=None, method='GET', data=None):
         if data and isinstance(data, dict):
             data = json.dumps(data)
         wf.logger.debug("posting with data "+(data if data else ''))
-        r = web.post(url, params, data, headers)
+        r = web.post(url, params=params, data=data, headers=headers)
 
     wf.logger.debug("st_api: url:"+url+", method: "+method+",  headers: "+str(headers)+", params: "+str(params)+", data: "+str(data))
     # throw an error if request failed
