@@ -187,6 +187,24 @@ def main(wf):
                     lambda: int(args.device_params[0]),
                 ]
         },
+        'slevel': {
+                'component': 'main',
+                'capability': 'windowShadeLevel',
+                'command': 'setShadeLevel',
+                'arguments': [
+                    lambda: int(args.device_params[0]),
+                ]
+        },
+        'open': {
+                'component': 'main',
+                'capability': 'windowShade',
+                'command': 'open'
+        },
+        'close': {
+                'component': 'main',
+                'capability': 'windowShade',
+                'command': 'close'
+        },
         'lock': {
                 'component': 'main',
                 'capability': 'lock',

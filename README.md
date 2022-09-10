@@ -54,14 +54,14 @@ Turns the Switch on or off - clicking switch name autocompletes switch name and 
 ```
 st <switch-name> dim <dim-level [0-100]>
 ```
-Turns the dimmer to dim level specified - clicking switch name autocompletes switch name and waits for command. If both name and command are provided, executes command and notifies upon success
+Turns the dimmer to dim level specified - clicking light name autocompletes light name and waits for command. If both name and command are provided, executes command and notifies upon success
 
 ## Color Commands
 
 ```
 st <switch-name> color <rgbhex or color-name>
 ```
-Turns the light to color specified - clicking switch name autocompletes switch name and waits for command. If both name and command are provided, executes command and notifies upon success
+Turns the light to color specified - clicking light name autocompletes light name and waits for command. If both name and command are provided, executes command and notifies upon success
 
 
 ## Lock Commands
@@ -69,7 +69,21 @@ Turns the light to color specified - clicking switch name autocompletes switch n
 ```
 st <lock-name> lock|unlock
 ```
-Causes the lock to lock or unlock  - clicking lock name autocompletes switch name and waits for command. If both name and command are provided, executes command and notifies upon success
+Causes the lock to lock or unlock  - clicking lock name autocompletes lock name and waits for command. If both name and command are provided, executes command and notifies upon success
+
+## Shade Commands
+
+```
+st <shade-name> open|close
+```
+Causes the shade to open or close  - clicking shade name autocompletes shade name and waits for command. If both name and command are provided, executes command and notifies upon success
+
+
+```
+st <shade-name> slevel <number - %age open>
+```
+Causes the shade to open to specified %age open (0 is closed, 100 is open)  - clicking shade name autocompletes shade name and waits for command. If both name and command and value are provided, executes command and notifies upon success
+
 
 ## Thermostat Commands
 

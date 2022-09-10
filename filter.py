@@ -19,6 +19,10 @@ def get_device_icon(device):
         icon = 'color-light'
     elif 'switchLevel' in capabilities:
         icon = 'light'
+    elif 'windowShade' in capabilities:
+        icon = 'shade'
+    elif 'contactSensor' in capabilities:
+        icon = 'contact'
     else:
         icon = 'switch'
     return 'icons/'+icon+'.png'
@@ -130,7 +134,18 @@ def device_status(wf, api_key, device):
         'colorControl': {
             'tag': 'color',
             'icon': u'🎨'
-
+        },
+        'windowShade': {
+            'tag': 'windowShade',
+            'icon': u'🪟'
+        },
+        'windowShadeLevel': {
+            'tag': 'shadeLevel',
+            'icon': u'🌒'
+        },
+        'contactSensor': {
+            'tag': 'contact',
+            'icon': u'🔓'
         },
         'thermostat': [
         {
@@ -224,6 +239,24 @@ def main(wf):
                     lambda: int(args.device_params[0]),
                 ]
         },
+        'slevel': {
+                'component': 'main',
+                'capability': 'windowShadeLevel',
+                'command': 'setShadeLevel',
+                'arguments': [
+                    lambda: int(args.device_params[0]),
+                ]
+        },
+        'open': {
+                'component': 'main',
+                'capability': 'windowShade',
+                'command': 'open'
+        },
+        'close': {
+                'component': 'main',
+                'capability': 'windowShade',
+                'command': 'close'
+        },
         'lock': {
                 'component': 'main',
                 'capability': 'lock',
@@ -233,6 +266,11 @@ def main(wf):
                 'component': 'main',
                 'capability': 'lock',
                 'command': 'unlock'
+        },
+        'view': {
+                'component': 'main',
+                'capability': 'contactSensor',
+                'command': 'view'
         },
         'color': {
                 'component': 'main',
